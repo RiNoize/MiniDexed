@@ -1,9 +1,9 @@
-d - Dexed FM synthesizer for bare metal Raspberry Pi
-// Copyright (C) 2022  The MiniDexed Team
-////
+//
 // minidexed.cpp
 //
-// MiniDexe
+// MiniDexed - Dexed FM synthesizer for bare metal Raspberry Pi
+// Copyright (C) 2022  The MiniDexed Team
+//
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
