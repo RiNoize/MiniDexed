@@ -449,6 +449,128 @@ void CUIMenu::EventHandler (TMenuEvent Event)
 	}
 }
 
+
+void CUIMenu::ShowVoiceDataElement (unsigned nTG, unsigned nVoiceDataElement)
+{
+	if (nTG >= m_nToneGenerators)
+	{
+		return;
+	}
+
+	// Raw DX7 voice data layout:
+	//   0..125  = 6 operators, 21 parameters each, ordered OP6..OP1
+	//   126..144 = common voice parameters
+	//   145..154 = voice name characters
+	//   155      = operator enable mask (handled separately by MiniDexed)
+	if (nVoiceDataElement >= 145)
+	{
+		// Name bytes and operator mask are not normal Edit Voice menu parameters.
+		return;
+	}
+
+	unsigned nEditVoiceMenuIndex = 0;
+	while (s_TGMenu[nEditVoiceMenuIndex].Name)
+	{
+		if (s_TGMenu[nEditVoiceMenuIndex].MenuItem == s_EditVoiceMenu)
+		{
+			break;
+		}
+		nEditVoiceMenuIndex++;
+	}
+	if (!s_TGMenu[nEditVoiceMenuIndex].Name)
+	{
+		return;
+	}
+
+	// Common stack state after selecting TGn, then "Edit Voice".
+	m_MenuStackParent[0] = s_MenuRoot;
+	m_MenuStackMenu[0] = s_MainMenu;
+	m_nMenuStackItem[0] = 0;
+	m_nMenuStackSelection[0] = nTG;
+	m_nMenuStackParameter[0] = 0;
+
+	m_MenuStackParent[1] = s_MainMenu;
+	m_MenuStackMenu[1] = s_TGMenu;
+	m_nMenuStackItem[1] = nTG;
+	m_nMenuStackSelection[1] = nEditVoiceMenuIndex;
+	m_nMenuStackParameter[1] = nTG;
+
+	if (nVoiceDataElement < 126)
+	{
+		unsigned nDX7OPBlock = nVoiceDataElement / 21;
+		unsigned nOP = 5 - nDX7OPBlock; // DX7 SysEx stores OP6 first; UI shows OP1 first.
+		unsigned nOPParameter = nVoiceDataElement % 21;
+
+		unsigned nOPMenuIndex = 0;
+		while (s_OperatorMenu[nOPMenuIndex].Name)
+		{
+			if (s_OperatorMenu[nOPMenuIndex].Handler == EditOPParameter &&
+			    s_OperatorMenu[nOPMenuIndex].Parameter == nOPParameter)
+			{
+				break;
+			}
+			nOPMenuIndex++;
+		}
+		if (!s_OperatorMenu[nOPMenuIndex].Name)
+		{
+			return;
+		}
+
+		m_MenuStackParent[2] = s_TGMenu;
+		m_MenuStackMenu[2] = s_EditVoiceMenu;
+		m_nMenuStackItem[2] = nEditVoiceMenuIndex;
+		m_nMenuStackSelection[2] = nOP;
+		m_nMenuStackParameter[2] = 0;
+
+		m_MenuStackParent[3] = s_EditVoiceMenu;
+		m_MenuStackMenu[3] = s_OperatorMenu;
+		m_nMenuStackItem[3] = nOP;
+		m_nMenuStackSelection[3] = nOPMenuIndex;
+		m_nMenuStackParameter[3] = nOP;
+
+		m_pParentMenu = s_OperatorMenu;
+		m_pCurrentMenu = 0;
+		m_nCurrentMenuItem = nOPMenuIndex;
+		m_nCurrentSelection = 0;
+		m_nCurrentParameter = nOPParameter;
+		m_nCurrentMenuDepth = 4;
+
+		EventHandler (MenuEventUpdateParameter);
+		return;
+	}
+
+	unsigned nVoiceParameter = nVoiceDataElement - 126;
+	unsigned nVoiceMenuIndex = 0;
+	while (s_EditVoiceMenu[nVoiceMenuIndex].Name)
+	{
+		if (s_EditVoiceMenu[nVoiceMenuIndex].Handler == EditVoiceParameter &&
+		    s_EditVoiceMenu[nVoiceMenuIndex].Parameter == nVoiceParameter)
+		{
+			break;
+		}
+		nVoiceMenuIndex++;
+	}
+	if (!s_EditVoiceMenu[nVoiceMenuIndex].Name)
+	{
+		return;
+	}
+
+	m_MenuStackParent[2] = s_TGMenu;
+	m_MenuStackMenu[2] = s_EditVoiceMenu;
+	m_nMenuStackItem[2] = nEditVoiceMenuIndex;
+	m_nMenuStackSelection[2] = nVoiceMenuIndex;
+	m_nMenuStackParameter[2] = 0;
+
+	m_pParentMenu = s_EditVoiceMenu;
+	m_pCurrentMenu = 0;
+	m_nCurrentMenuItem = nVoiceMenuIndex;
+	m_nCurrentSelection = 0;
+	m_nCurrentParameter = nVoiceParameter;
+	m_nCurrentMenuDepth = 3;
+
+	EventHandler (MenuEventUpdateParameter);
+}
+
 void CUIMenu::MenuHandler (CUIMenu *pUIMenu, TMenuEvent Event)
 {
 	switch (Event)
