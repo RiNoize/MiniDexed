@@ -104,3 +104,4 @@ This project stands on the shoulders of giants. Special thanks to:
 
 ## Stargazers over time
 [![Stargazers over time](https://starchart.cc/probonopd/MiniDexed.svg?variant=adaptive)](https://starchart.cc/probonopd/MiniDexed)
+Test build for AutoFollowSysexParameter
