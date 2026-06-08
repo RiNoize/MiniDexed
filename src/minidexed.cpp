@@ -1,9 +1,9 @@
-//
+d - Dexed FM synthesizer for bare metal Raspberry Pi
+// Copyright (C) 2022  The MiniDexed Team
+////
 // minidexed.cpp
 //
-// MiniDexed - Dexed FM synthesizer for bare metal Raspberry Pi
-// Copyright (C) 2022  The MiniDexed Team
-//
+// MiniDexe
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
@@ -1798,8 +1798,10 @@ void CMiniDexed::setVoiceDataElement(uint8_t data, uint8_t number, uint8_t nTG)
 
 	assert (m_pTG[nTG]);
 
-	m_pTG[nTG]->setVoiceDataElement(constrain(data, 0, 155),constrain(number, 0, 99));
+	uint8_t uchData = constrain(data, 0, 155);
+	m_pTG[nTG]->setVoiceDataElement(uchData, constrain(number, 0, 99));
 	m_UI.ParameterChanged ();
+	m_UI.ShowVoiceDataElement (uchData, nTG);
 }
 
 int16_t CMiniDexed::checkSystemExclusive(const uint8_t* pMessage,const  uint16_t nLength, uint8_t nTG)
