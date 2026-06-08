@@ -47,6 +47,9 @@ public:
 	void ParameterChanged (void);
 	void DisplayChanged (void);
 
+	// Show the existing voice-edit menu item for a raw DX7 voice data element.
+	void ShowVoiceDataElement (unsigned nTG, unsigned nVoiceDataElement);
+
 	// Write to display in this format:
 	// +----------------+
 	// |PARAM       MENU|
@@ -61,6 +64,37 @@ public:
 private:
 	void LCDWrite (const char *pString);		// Print to optional HD44780 display
 
+	void EncoderEventHandler (CKY040::TEvent Event);
+	static void EncoderEventStub (CKY040::TEvent Event, void *pParam);
+	void UIButtonsEventHandler (CUIButton::BtnEvent Event);
+	static void UIButtonsEventStub (CUIButton::BtnEvent Event, void *pParam);
+	void UISetMIDIButtonChannel (unsigned uCh);
+
+private:
+	CMiniDexed *m_pMiniDexed;
+	CGPIOManager *m_pGPIOManager;
+	CI2CMaster *m_pI2CMaster;
+	CSPIMaster *m_pSPIMaster;
+	CConfig *m_pConfig;
+
+	CCharDevice    *m_pLCD;
+	CHD44780Device *m_pHD44780;
+	CSSD1306Device *m_pSSD1306;
+	CST7789Display *m_pST7789Display;
+	CST7789Device  *m_pST7789;
+	CWriteBufferDevice *m_pLCDBuffered;
+	
+	CUIButtons *m_pUIButtons;
+
+	unsigned m_nMIDIButtonCh;
+
+	CKY040 *m_pRotaryEncoder;
+	bool m_bSwitchPressed;
+
+	CUIMenu m_Menu;
+};
+
+#endif
 	void EncoderEventHandler (CKY040::TEvent Event);
 	static void EncoderEventStub (CKY040::TEvent Event, void *pParam);
 	void UIButtonsEventHandler (CUIButton::BtnEvent Event);
