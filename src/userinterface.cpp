@@ -222,6 +222,11 @@ void CUserInterface::DisplayChanged (void)
 	m_Menu.EventHandler (CUIMenu::MenuEventUpdate);
 }
 
+void CUserInterface::ShowVoiceDataElement (unsigned nTG, unsigned nVoiceDataElement)
+{
+	m_Menu.ShowVoiceDataElement (nTG, nVoiceDataElement);
+}
+
 void CUserInterface::DisplayWrite (const char *pMenu, const char *pParam, const char *pValue,
 				   bool bArrowDown, bool bArrowUp)
 {
