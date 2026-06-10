@@ -1801,7 +1801,7 @@ void CMiniDexed::setVoiceDataElement(uint8_t data, uint8_t number, uint8_t nTG)
 	uint8_t uchData = constrain(data, 0, 155);
 	m_pTG[nTG]->setVoiceDataElement(uchData, constrain(number, 0, 99));
 	m_UI.ParameterChanged ();
-	m_UI.ShowVoiceDataElement (uchData, nTG);
+	m_UI.ShowVoiceDataElement (nTG, uchData);
 }
 
 int16_t CMiniDexed::checkSystemExclusive(const uint8_t* pMessage,const  uint16_t nLength, uint8_t nTG)
