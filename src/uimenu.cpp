@@ -450,7 +450,7 @@ void CUIMenu::EventHandler (TMenuEvent Event)
 }
 
 
-void CUIMenu::ShowVoiceDataElement (unsigned nTG, unsigned nVoiceDataElement)
+void CUIMenu::ShowVoiceDataElement (unsigned nTG, unsigned nVoiceDataElement, unsigned nValue)
 {
 	if (nTG >= m_nToneGenerators)
 	{
@@ -458,7 +458,7 @@ void CUIMenu::ShowVoiceDataElement (unsigned nTG, unsigned nVoiceDataElement)
 	}
 
 	// Raw DX7 voice data layout:
-	//   0..125  = 6 operators, 21 parameters each, ordered OP6..OP1
+	//   0..125   = 6 operators, 21 parameters each, ordered OP6..OP1
 	//   126..144 = common voice parameters
 	//   145..154 = voice name characters
 	//   155      = operator enable mask (handled separately by MiniDexed)
@@ -468,33 +468,57 @@ void CUIMenu::ShowVoiceDataElement (unsigned nTG, unsigned nVoiceDataElement)
 		return;
 	}
 
-	unsigned nEditVoiceMenuIndex = 0;
-	while (s_TGMenu[nEditVoiceMenuIndex].Name)
+	// MiniDexed may call this once for every TG that matches the SysEx MIDI channel.
+	// Accumulate consecutive calls for the same SysEx edit so the LCD can show, for example:
+	//   TG1+2+3
+	//   LFO Speed 45
+	static unsigned s_nLastVoiceDataElement = 999;
+	static unsigned s_nLastValue = 999;
+	static unsigned s_nLastTG = 999;
+	static unsigned s_nTGMask = 0;
+
+	if (nVoiceDataElement != s_nLastVoiceDataElement ||
+	    nValue != s_nLastValue ||
+	    nTG <= s_nLastTG)
 	{
-		if (s_TGMenu[nEditVoiceMenuIndex].MenuItem == s_EditVoiceMenu)
+		s_nTGMask = 0;
+	}
+
+	s_nTGMask |= (1U << nTG);
+	s_nLastVoiceDataElement = nVoiceDataElement;
+	s_nLastValue = nValue;
+	s_nLastTG = nTG;
+
+	string TGs;
+	bool bFirstTG = true;
+	for (unsigned i = 0; i < m_nToneGenerators; i++)
+	{
+		if (!(s_nTGMask & (1U << i)))
 		{
+			continue;
+		}
+
+		string Part;
+		if (bFirstTG)
+		{
+			Part = "TG" + to_string (i + 1);
+		}
+		else
+		{
+			Part = "+" + to_string (i + 1);
+		}
+
+		if (TGs.length () + Part.length () > 16)
+		{
+			TGs += "+...";
 			break;
 		}
-		nEditVoiceMenuIndex++;
-	}
-	if (!s_TGMenu[nEditVoiceMenuIndex].Name)
-	{
-		return;
+
+		TGs += Part;
+		bFirstTG = false;
 	}
 
-	// Common stack state after selecting TGn, then "Edit Voice".
-	m_MenuStackParent[0] = s_MenuRoot;
-	m_MenuStackMenu[0] = s_MainMenu;
-	m_nMenuStackItem[0] = 0;
-	m_nMenuStackSelection[0] = nTG;
-	m_nMenuStackParameter[0] = 0;
-
-	m_MenuStackParent[1] = s_MainMenu;
-	m_MenuStackMenu[1] = s_TGMenu;
-	m_nMenuStackItem[1] = nTG;
-	m_nMenuStackSelection[1] = nEditVoiceMenuIndex;
-	m_nMenuStackParameter[1] = nTG;
-
+	string ParameterName;
 	if (nVoiceDataElement < 126)
 	{
 		unsigned nDX7OPBlock = nVoiceDataElement / 21;
@@ -516,59 +540,36 @@ void CUIMenu::ShowVoiceDataElement (unsigned nTG, unsigned nVoiceDataElement)
 			return;
 		}
 
-		m_MenuStackParent[2] = s_TGMenu;
-		m_MenuStackMenu[2] = s_EditVoiceMenu;
-		m_nMenuStackItem[2] = nEditVoiceMenuIndex;
-		m_nMenuStackSelection[2] = nOP;
-		m_nMenuStackParameter[2] = 0;
-
-		m_MenuStackParent[3] = s_EditVoiceMenu;
-		m_MenuStackMenu[3] = s_OperatorMenu;
-		m_nMenuStackItem[3] = nOP;
-		m_nMenuStackSelection[3] = nOPMenuIndex;
-		m_nMenuStackParameter[3] = nOP;
-
-		m_pParentMenu = s_OperatorMenu;
-		m_pCurrentMenu = 0;
-		m_nCurrentMenuItem = nOPMenuIndex;
-		m_nCurrentSelection = 0;
-		m_nCurrentParameter = nOPParameter;
-		m_nCurrentMenuDepth = 4;
-
-		EventHandler (MenuEventUpdateParameter);
-		return;
+		ParameterName = "OP" + to_string (nOP + 1) + " " + s_OperatorMenu[nOPMenuIndex].Name;
 	}
-
-	unsigned nVoiceParameter = nVoiceDataElement - 126;
-	unsigned nVoiceMenuIndex = 0;
-	while (s_EditVoiceMenu[nVoiceMenuIndex].Name)
+	else
 	{
-		if (s_EditVoiceMenu[nVoiceMenuIndex].Handler == EditVoiceParameter &&
-		    s_EditVoiceMenu[nVoiceMenuIndex].Parameter == nVoiceParameter)
+		unsigned nVoiceParameter = nVoiceDataElement - 126;
+		unsigned nVoiceMenuIndex = 0;
+		while (s_EditVoiceMenu[nVoiceMenuIndex].Name)
 		{
-			break;
+			if (s_EditVoiceMenu[nVoiceMenuIndex].Handler == EditVoiceParameter &&
+			    s_EditVoiceMenu[nVoiceMenuIndex].Parameter == nVoiceParameter)
+			{
+				break;
+			}
+			nVoiceMenuIndex++;
 		}
-		nVoiceMenuIndex++;
+		if (!s_EditVoiceMenu[nVoiceMenuIndex].Name)
+		{
+			return;
+		}
+
+		ParameterName = s_EditVoiceMenu[nVoiceMenuIndex].Name;
 	}
-	if (!s_EditVoiceMenu[nVoiceMenuIndex].Name)
+
+	string ValueLine = ParameterName + " " + to_string (nValue);
+	if (ValueLine.length () > 16)
 	{
-		return;
+		ValueLine = ValueLine.substr (0, 16);
 	}
 
-	m_MenuStackParent[2] = s_TGMenu;
-	m_MenuStackMenu[2] = s_EditVoiceMenu;
-	m_nMenuStackItem[2] = nEditVoiceMenuIndex;
-	m_nMenuStackSelection[2] = nVoiceMenuIndex;
-	m_nMenuStackParameter[2] = 0;
-
-	m_pParentMenu = s_EditVoiceMenu;
-	m_pCurrentMenu = 0;
-	m_nCurrentMenuItem = nVoiceMenuIndex;
-	m_nCurrentSelection = 0;
-	m_nCurrentParameter = nVoiceParameter;
-	m_nCurrentMenuDepth = 3;
-
-	EventHandler (MenuEventUpdateParameter);
+	m_pUI->DisplayWrite ("", TGs.c_str (), ValueLine.c_str (), false, false);
 }
 
 void CUIMenu::MenuHandler (CUIMenu *pUIMenu, TMenuEvent Event)
