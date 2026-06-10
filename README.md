@@ -76,7 +76,7 @@ Please see the [wiki](https://github.com/probonopd/MiniDexed/wiki/Development#bu
 
 ## Contributing
 
-This project lives from the contributions of skilled C++ developers, testers, writers, etc, etc. Please see <https://github.com/probonopd/MiniDexed/issues>.
+This project lives from the contributions of skilled C++ developers, testers, writers, etc. Please see <https://github.com/probonopd/MiniDexed/issues>.
 
 ## Discussions
 
