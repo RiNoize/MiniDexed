@@ -134,6 +134,7 @@ private:
 
 	static void InputTxt (CUIMenu *pUIMenu, TMenuEvent Event);
 	static void TimerHandlerNoBack (TKernelTimerHandle hTimer, void *pParam, void *pContext);
+	static void SysExDisplayTimerHandler (TKernelTimerHandle hTimer, void *pParam, void *pContext);
 	 
 private:
 	CUserInterface *m_pUI;
@@ -185,6 +186,8 @@ private:
 	unsigned m_nSelectedPerformanceID =0;
 	unsigned m_nSelectedPerformanceBankID =0;
 	bool m_bSplashShow=false;
+	bool m_bSysExDisplayActive=false;
+	unsigned m_nSysExDisplaySequence=0;
 
 };
 
