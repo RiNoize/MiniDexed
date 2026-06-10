@@ -48,7 +48,7 @@ public:
 	void DisplayChanged (void);
 
 	// Show the existing voice-edit menu item for a raw DX7 voice data element.
-	void ShowVoiceDataElement (unsigned nTG, unsigned nVoiceDataElement);
+	void ShowVoiceDataElement (unsigned nTG, unsigned nVoiceDataElement, unsigned nValue);
 
 	// Write to display in this format:
 	// +----------------+
