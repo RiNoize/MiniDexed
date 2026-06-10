@@ -1803,14 +1803,6 @@ void CMiniDexed::setVoiceDataElement(uint8_t data, uint8_t number, uint8_t nTG)
 	m_pTG[nTG]->setVoiceDataElement(uchData, uchValue);
 	m_UI.ParameterChanged ();
 	m_UI.ShowVoiceDataElement (nTG, uchData);
-
-	// Diagnostic/direct display: if the menu jump does not become visible,
-	// this still proves that a DX7 voice-parameter SysEx reached MiniDexed.
-	char Param[17];
-	char Value[17];
-	snprintf (Param, sizeof Param, "P%03u TG%u", uchData, nTG + 1);
-	snprintf (Value, sizeof Value, "VALUE %u", uchValue);
-	m_UI.DisplayWrite ("SYSEX", Param, Value, false, false);
 }
 
 int16_t CMiniDexed::checkSystemExclusive(const uint8_t* pMessage,const  uint16_t nLength, uint8_t nTG)
