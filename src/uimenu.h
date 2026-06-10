@@ -63,7 +63,7 @@ public:
 
 	// Jump the UI to the existing voice-edit menu item that corresponds to
 	// a raw DX7 voice data element changed by incoming SysEx.
-	void ShowVoiceDataElement (unsigned nTG, unsigned nVoiceDataElement);
+	void ShowVoiceDataElement (unsigned nTG, unsigned nVoiceDataElement, unsigned nValue);
 	
 private:
 	typedef void TMenuHandler (CUIMenu *pUIMenu, TMenuEvent Event);
