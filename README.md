@@ -68,7 +68,7 @@ Please see the [wiki](https://github.com/probonopd/MiniDexed/wiki) for more info
 
 ## Downloading
 
-Compiled versions are available on [GitHub Releases](../../releases). Just download and put on a FAT32 formatted SD card.
+Compiled versions are available on [GitHub Releases](../../releases). Just download and put on a FAT32 formatted, SD card.
 
 ## Building
 
