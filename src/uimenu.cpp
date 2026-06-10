@@ -30,6 +30,7 @@
 #include <circle/sysconfig.h>
 #include <assert.h>
 #include <cstddef>
+#include <stdint.h>
 
 using namespace std;
 LOGMODULE ("uimenu");
@@ -382,6 +383,20 @@ CUIMenu::CUIMenu (CUserInterface *pUI, CMiniDexed *pMiniDexed, CConfig *pConfig)
 
 void CUIMenu::EventHandler (TMenuEvent Event)
 {
+	// While the incoming SysEx feedback screen is active, suppress normal
+	// menu refreshes. Otherwise the regular patch/menu display competes
+	// with the SysEx display and the LCD flickers during fast potentiometer
+	// movement. User actions still cancel the overlay and are handled normally.
+	if (m_bSysExDisplayActive)
+	{
+		if (Event == MenuEventUpdate || Event == MenuEventUpdateParameter)
+		{
+			return;
+		}
+
+		m_bSysExDisplayActive = false;
+	}
+
 	switch (Event)
 	{
 	case MenuEventBack:				// pop menu
@@ -568,6 +583,16 @@ void CUIMenu::ShowVoiceDataElement (unsigned nTG, unsigned nVoiceDataElement, un
 	{
 		ValueLine = ValueLine.substr (0, 16);
 	}
+
+	m_bSysExDisplayActive = true;
+	m_nSysExDisplaySequence++;
+
+	// Keep the feedback visible briefly after the last received SysEx.
+	// Every incoming message starts a new timer with a new sequence number;
+	// older timers are ignored, so fast knob movements do not clear the
+	// display between consecutive SysEx messages.
+	CTimer::Get ()->StartKernelTimer (MSEC2HZ (3000), SysExDisplayTimerHandler,
+					 (void *)(uintptr_t) m_nSysExDisplaySequence, this);
 
 	m_pUI->DisplayWrite ("", TGs.c_str (), ValueLine.c_str (), false, false);
 }
@@ -1680,6 +1705,21 @@ void CUIMenu::TimerHandlerNoBack (TKernelTimerHandle hTimer, void *pParam, void 
 	
 	pThis->m_bSplashShow = false;
 	
+	pThis->EventHandler (MenuEventUpdate);
+}
+
+void CUIMenu::SysExDisplayTimerHandler (TKernelTimerHandle hTimer, void *pParam, void *pContext)
+{
+	CUIMenu *pThis = static_cast<CUIMenu *> (pContext);
+	assert (pThis);
+
+	unsigned nSequence = (unsigned)(uintptr_t) pParam;
+	if (nSequence != pThis->m_nSysExDisplaySequence)
+	{
+		return;
+	}
+
+	pThis->m_bSysExDisplayActive = false;
 	pThis->EventHandler (MenuEventUpdate);
 }
 
