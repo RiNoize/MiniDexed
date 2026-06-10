@@ -222,9 +222,9 @@ void CUserInterface::DisplayChanged (void)
 	m_Menu.EventHandler (CUIMenu::MenuEventUpdate);
 }
 
-void CUserInterface::ShowVoiceDataElement (unsigned nTG, unsigned nVoiceDataElement)
+void CUserInterface::ShowVoiceDataElement (unsigned nTG, unsigned nVoiceDataElement, unsigned nValue)
 {
-	m_Menu.ShowVoiceDataElement (nTG, nVoiceDataElement);
+	m_Menu.ShowVoiceDataElement (nTG, nVoiceDataElement, nValue);
 }
 
 void CUserInterface::DisplayWrite (const char *pMenu, const char *pParam, const char *pValue,
