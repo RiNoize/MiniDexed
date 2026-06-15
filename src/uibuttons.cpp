@@ -310,6 +310,17 @@ boolean CUIButtons::Initialize (void)
 	m_BankDownMidi = ccToMidiPin( m_pConfig->GetMIDIButtonBankDown ());
 	m_TGUpMidi = ccToMidiPin( m_pConfig->GetMIDIButtonTGUp ());
 	m_TGDownMidi = ccToMidiPin( m_pConfig->GetMIDIButtonTGDown ());
+	m_TG1Midi = ccToMidiPin( m_pConfig->GetMIDIButtonTG1 ());
+	m_TG2Midi = ccToMidiPin( m_pConfig->GetMIDIButtonTG2 ());
+	m_TG3Midi = ccToMidiPin( m_pConfig->GetMIDIButtonTG3 ());
+	m_TG4Midi = ccToMidiPin( m_pConfig->GetMIDIButtonTG4 ());
+	m_TG5Midi = ccToMidiPin( m_pConfig->GetMIDIButtonTG5 ());
+	m_TG6Midi = ccToMidiPin( m_pConfig->GetMIDIButtonTG6 ());
+	m_TG7Midi = ccToMidiPin( m_pConfig->GetMIDIButtonTG7 ());
+	m_TG8Midi = ccToMidiPin( m_pConfig->GetMIDIButtonTG8 ());
+	m_EffectsMidi = ccToMidiPin( m_pConfig->GetMIDIButtonEffects ());
+	m_MasterVolumeMidi = ccToMidiPin( m_pConfig->GetMIDIButtonMasterVolume ());
+	m_PerformanceMidi = ccToMidiPin( m_pConfig->GetMIDIButtonPerformance ());
 	
 	// First sanity check and convert the timeouts:
 	// Internally values are in tenths of a millisecond, but config values
@@ -332,15 +343,21 @@ boolean CUIButtons::Initialize (void)
 	// MIDI buttons only support a single click.
 	unsigned pins[MAX_BUTTONS] = {
 		m_prevPin, m_nextPin, m_backPin, m_selectPin, m_homePin, m_pgmUpPin,  m_pgmDownPin,  m_BankUpPin,  m_BankDownPin, m_TGUpPin,  m_TGDownPin, 
-		m_prevMidi, m_nextMidi, m_backMidi, m_selectMidi, m_homeMidi, m_pgmUpMidi, m_pgmDownMidi, m_BankUpMidi, m_BankDownMidi, m_TGUpMidi, m_TGDownMidi
+		m_prevMidi, m_nextMidi, m_backMidi, m_selectMidi, m_homeMidi, m_pgmUpMidi, m_pgmDownMidi, m_BankUpMidi, m_BankDownMidi, m_TGUpMidi, m_TGDownMidi,
+		m_TG1Midi, m_TG2Midi, m_TG3Midi, m_TG4Midi, m_TG5Midi, m_TG6Midi, m_TG7Midi, m_TG8Midi,
+		m_EffectsMidi, m_MasterVolumeMidi, m_PerformanceMidi
 	};
 	CUIButton::BtnTrigger triggers[MAX_BUTTONS] = {
 		// Normal buttons
 		m_prevAction, m_nextAction, m_backAction, m_selectAction, m_homeAction,
 		m_pgmUpAction, m_pgmDownAction, m_BankUpAction, m_BankDownAction, m_TGUpAction, m_TGDownAction, 
 		// MIDI Buttons only support a single click (at present)
-		CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick,
-		CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick
+		CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick,
+		CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick,
+		CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick,
+		CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick,
+		CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick,
+		CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick
 	};
 	CUIButton::BtnEvent events[MAX_BUTTONS] = {
 		// Normal buttons
@@ -366,7 +383,18 @@ boolean CUIButtons::Initialize (void)
 		CUIButton::BtnEventBankUp,
 		CUIButton::BtnEventBankDown,
 		CUIButton::BtnEventTGUp,
-		CUIButton::BtnEventTGDown
+		CUIButton::BtnEventTGDown,
+		CUIButton::BtnEventTG1,
+		CUIButton::BtnEventTG2,
+		CUIButton::BtnEventTG3,
+		CUIButton::BtnEventTG4,
+		CUIButton::BtnEventTG5,
+		CUIButton::BtnEventTG6,
+		CUIButton::BtnEventTG7,
+		CUIButton::BtnEventTG8,
+		CUIButton::BtnEventEffects,
+		CUIButton::BtnEventMasterVolume,
+		CUIButton::BtnEventPerformance
 	};
 
 	// Setup normal GPIO buttons first
