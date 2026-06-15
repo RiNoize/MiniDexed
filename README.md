@@ -12,7 +12,7 @@ Listen to some examples made with MiniDexed by Banana71 [here](https://soundclou
 
 - [x] Uses [Synth_Dexed](https://codeberg.org/dcoredump/Synth_Dexed) with [circle-stdlib](https://github.com/smuehlst/circle-stdlib)
 - [x] SD card contents can be downloaded from [GitHub Releases](../../releases)
-- [x] Runs on all Raspberry Pi models (except Pico); see below for details
+- [x] Runs on all Raspberry  Pi models (except Pico); see below for details
 - [x] Produces sound on the headphone jack, HDMI display or [audio extractor](https://github.com/probonopd/MiniDexed/wiki/Hardware#hdmi-to-audio) (better), or a [dedicated DAC](https://github.com/probonopd/MiniDexed/wiki/Hardware#i2s-dac) (best)
 - [x] Supports multiple voices through Program Change and Bank Change LSB/MSB MIDI messages
 - [x] Loads voices from `.syx` files from SD card (e.g., using `getsysex.sh` or from [Dexed_cart_1.0.zip](http://hsjp.eu/downloads/Dexed/Dexed_cart_1.0.zip))
