@@ -395,6 +395,50 @@ void CUserInterface::UIButtonsEventHandler (CUIButton::BtnEvent Event)
 		m_Menu.EventHandler (CUIMenu::MenuEventTGDown);
 		break;
 
+	case CUIButton::BtnEventTG1:
+		m_Menu.EventHandler (CUIMenu::MenuEventTG1);
+		break;
+
+	case CUIButton::BtnEventTG2:
+		m_Menu.EventHandler (CUIMenu::MenuEventTG2);
+		break;
+
+	case CUIButton::BtnEventTG3:
+		m_Menu.EventHandler (CUIMenu::MenuEventTG3);
+		break;
+
+	case CUIButton::BtnEventTG4:
+		m_Menu.EventHandler (CUIMenu::MenuEventTG4);
+		break;
+
+	case CUIButton::BtnEventTG5:
+		m_Menu.EventHandler (CUIMenu::MenuEventTG5);
+		break;
+
+	case CUIButton::BtnEventTG6:
+		m_Menu.EventHandler (CUIMenu::MenuEventTG6);
+		break;
+
+	case CUIButton::BtnEventTG7:
+		m_Menu.EventHandler (CUIMenu::MenuEventTG7);
+		break;
+
+	case CUIButton::BtnEventTG8:
+		m_Menu.EventHandler (CUIMenu::MenuEventTG8);
+		break;
+
+	case CUIButton::BtnEventEffects:
+		m_Menu.EventHandler (CUIMenu::MenuEventEffects);
+		break;
+
+	case CUIButton::BtnEventMasterVolume:
+		m_Menu.EventHandler (CUIMenu::MenuEventMasterVolume);
+		break;
+
+	case CUIButton::BtnEventPerformance:
+		m_Menu.EventHandler (CUIMenu::MenuEventPerformance);
+		break;
+
 	default:
 		break;
 	}
