@@ -31,6 +31,7 @@
 #include <assert.h>
 #include <cstddef>
 #include <stdint.h>
+#include <string.h>
 
 using namespace std;
 LOGMODULE ("uimenu");
@@ -456,6 +457,50 @@ void CUIMenu::EventHandler (TMenuEvent Event)
 	case MenuEventTGUp:
 	case MenuEventTGDown:
 		TGUpDownHandler(Event);
+		break;
+
+	case MenuEventTG1:
+		TGSelectHandler (0);
+		break;
+
+	case MenuEventTG2:
+		TGSelectHandler (1);
+		break;
+
+	case MenuEventTG3:
+		TGSelectHandler (2);
+		break;
+
+	case MenuEventTG4:
+		TGSelectHandler (3);
+		break;
+
+	case MenuEventTG5:
+		TGSelectHandler (4);
+		break;
+
+	case MenuEventTG6:
+		TGSelectHandler (5);
+		break;
+
+	case MenuEventTG7:
+		TGSelectHandler (6);
+		break;
+
+	case MenuEventTG8:
+		TGSelectHandler (7);
+		break;
+
+	case MenuEventEffects:
+		MainMenuSelectHandler ("Effects");
+		break;
+
+	case MenuEventMasterVolume:
+		MainMenuSelectHandler ("Master Volume");
+		break;
+
+	case MenuEventPerformance:
+		MainMenuSelectHandler ("Performance");
 		break;
 
 	default:
@@ -1669,6 +1714,16 @@ void CUIMenu::TGUpDownHandler (TMenuEvent Event)
 		}
 	}
 
+	TGSelectHandler (nTG);
+}
+
+void CUIMenu::TGSelectHandler (unsigned nTG)
+{
+	if (nTG >= m_nToneGenerators)
+	{
+		return;
+	}
+
 	// Set menu to the appropriate TG menu as follows:
 	//  Top = Root
 	//  Menu [0] = Main
@@ -1685,6 +1740,47 @@ void CUIMenu::TGUpDownHandler (TMenuEvent Event)
 	m_MenuStackMenu[0] = s_MainMenu;
 	m_nMenuStackItem[0] = 0;
 	m_nMenuStackSelection[0] = nTG;
+	m_nMenuStackParameter[0] = 0;
+
+	EventHandler (MenuEventUpdate);
+}
+
+void CUIMenu::MainMenuSelectHandler (const char *pName)
+{
+	if (pName == 0)
+	{
+		return;
+	}
+
+	unsigned nMainMenuIndex = 0;
+	while (s_MainMenu[nMainMenuIndex].Name)
+	{
+		if (strcmp (s_MainMenu[nMainMenuIndex].Name, pName) == 0)
+		{
+			break;
+		}
+		++nMainMenuIndex;
+	}
+
+	if (!s_MainMenu[nMainMenuIndex].Name)
+	{
+		return;
+	}
+
+	// Jump directly to a top-level main menu item such as Effects, Master Volume,
+	// or Performance. This mirrors selecting that item from the main menu.
+	m_pParentMenu = s_MainMenu;
+	m_pCurrentMenu = s_MainMenu[nMainMenuIndex].MenuItem;
+	m_nCurrentMenuItem = nMainMenuIndex;
+	m_nCurrentSelection = 0;
+	m_nCurrentParameter = s_MainMenu[nMainMenuIndex].Parameter;
+	m_nCurrentMenuDepth = 1;
+
+	// Place the main menu on the stack with Root as the parent.
+	m_MenuStackParent[0] = s_MenuRoot;
+	m_MenuStackMenu[0] = s_MainMenu;
+	m_nMenuStackItem[0] = 0;
+	m_nMenuStackSelection[0] = nMainMenuIndex;
 	m_nMenuStackParameter[0] = 0;
 
 	EventHandler (MenuEventUpdate);
