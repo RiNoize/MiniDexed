@@ -53,6 +53,17 @@ public:
 		MenuEventBankDown,
 		MenuEventTGUp,
 		MenuEventTGDown,
+		MenuEventTG1,
+		MenuEventTG2,
+		MenuEventTG3,
+		MenuEventTG4,
+		MenuEventTG5,
+		MenuEventTG6,
+		MenuEventTG7,
+		MenuEventTG8,
+		MenuEventEffects,
+		MenuEventMasterVolume,
+		MenuEventPerformance,
 		MenuEventUnknown
 	};
 
@@ -129,6 +140,8 @@ private:
 	void PgmUpDownHandler (TMenuEvent Event);
 	void BankUpDownHandler (TMenuEvent Event);
 	void TGUpDownHandler (TMenuEvent Event);
+	void TGSelectHandler (unsigned nTG);
+	void MainMenuSelectHandler (const char *pName);
 
 	static void TimerHandler (TKernelTimerHandle hTimer, void *pParam, void *pContext);
 
