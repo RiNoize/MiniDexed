@@ -229,6 +229,17 @@ public:
 	unsigned GetMIDIButtonBankDown (void) const;
 	unsigned GetMIDIButtonTGUp (void) const;
 	unsigned GetMIDIButtonTGDown (void) const;
+	unsigned GetMIDIButtonTG1 (void) const;
+	unsigned GetMIDIButtonTG2 (void) const;
+	unsigned GetMIDIButtonTG3 (void) const;
+	unsigned GetMIDIButtonTG4 (void) const;
+	unsigned GetMIDIButtonTG5 (void) const;
+	unsigned GetMIDIButtonTG6 (void) const;
+	unsigned GetMIDIButtonTG7 (void) const;
+	unsigned GetMIDIButtonTG8 (void) const;
+	unsigned GetMIDIButtonEffects (void) const;
+	unsigned GetMIDIButtonMasterVolume (void) const;
+	unsigned GetMIDIButtonPerformance (void) const;
 	
 	// KY-040 Rotary Encoder
 	// GPIO pin numbers are chip numbers, not header positions
@@ -371,6 +382,17 @@ private:
 	unsigned m_nMIDIButtonBankDown;
 	unsigned m_nMIDIButtonTGUp;
 	unsigned m_nMIDIButtonTGDown;
+	unsigned m_nMIDIButtonTG1;
+	unsigned m_nMIDIButtonTG2;
+	unsigned m_nMIDIButtonTG3;
+	unsigned m_nMIDIButtonTG4;
+	unsigned m_nMIDIButtonTG5;
+	unsigned m_nMIDIButtonTG6;
+	unsigned m_nMIDIButtonTG7;
+	unsigned m_nMIDIButtonTG8;
+	unsigned m_nMIDIButtonEffects;
+	unsigned m_nMIDIButtonMasterVolume;
+	unsigned m_nMIDIButtonPerformance;
 
 	bool m_bEncoderEnabled;
 	unsigned m_nEncoderPinClock;
