@@ -64,6 +64,20 @@ public:
 		MenuEventEffects,
 		MenuEventMasterVolume,
 		MenuEventPerformance,
+		MenuEventTGVoice,
+		MenuEventTGBank,
+		MenuEventTGVolume,
+		MenuEventTGPan,
+		MenuEventTGReverbSend,
+		MenuEventTGDetune,
+		MenuEventTGCutoff,
+		MenuEventTGResonance,
+		MenuEventTGPitchBend,
+		MenuEventTGPortamento,
+		MenuEventTGPolyMono,
+		MenuEventTGModulation,
+		MenuEventTGChannel,
+		MenuEventTGEditVoice,
 		MenuEventUnknown
 	};
 
@@ -141,6 +155,7 @@ private:
 	void BankUpDownHandler (TMenuEvent Event);
 	void TGUpDownHandler (TMenuEvent Event);
 	void TGSelectHandler (unsigned nTG);
+	void TGMenuSelectHandler (const char *pName);
 	void MainMenuSelectHandler (const char *pName);
 
 	static void TimerHandler (TKernelTimerHandle hTimer, void *pParam, void *pContext);

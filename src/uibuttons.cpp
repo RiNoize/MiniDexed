@@ -321,6 +321,20 @@ boolean CUIButtons::Initialize (void)
 	m_EffectsMidi = ccToMidiPin( m_pConfig->GetMIDIButtonEffects ());
 	m_MasterVolumeMidi = ccToMidiPin( m_pConfig->GetMIDIButtonMasterVolume ());
 	m_PerformanceMidi = ccToMidiPin( m_pConfig->GetMIDIButtonPerformance ());
+	m_TGVoiceMidi = ccToMidiPin( m_pConfig->GetMIDIButtonTGVoice ());
+	m_TGBankMidi = ccToMidiPin( m_pConfig->GetMIDIButtonTGBank ());
+	m_TGVolumeMidi = ccToMidiPin( m_pConfig->GetMIDIButtonTGVolume ());
+	m_TGPanMidi = ccToMidiPin( m_pConfig->GetMIDIButtonTGPan ());
+	m_TGReverbSendMidi = ccToMidiPin( m_pConfig->GetMIDIButtonTGReverbSend ());
+	m_TGDetuneMidi = ccToMidiPin( m_pConfig->GetMIDIButtonTGDetune ());
+	m_TGCutoffMidi = ccToMidiPin( m_pConfig->GetMIDIButtonTGCutoff ());
+	m_TGResonanceMidi = ccToMidiPin( m_pConfig->GetMIDIButtonTGResonance ());
+	m_TGPitchBendMidi = ccToMidiPin( m_pConfig->GetMIDIButtonTGPitchBend ());
+	m_TGPortamentoMidi = ccToMidiPin( m_pConfig->GetMIDIButtonTGPortamento ());
+	m_TGPolyMonoMidi = ccToMidiPin( m_pConfig->GetMIDIButtonTGPolyMono ());
+	m_TGModulationMidi = ccToMidiPin( m_pConfig->GetMIDIButtonTGModulation ());
+	m_TGChannelMidi = ccToMidiPin( m_pConfig->GetMIDIButtonTGChannel ());
+	m_TGEditVoiceMidi = ccToMidiPin( m_pConfig->GetMIDIButtonTGEditVoice ());
 	
 	// First sanity check and convert the timeouts:
 	// Internally values are in tenths of a millisecond, but config values
@@ -345,19 +359,25 @@ boolean CUIButtons::Initialize (void)
 		m_prevPin, m_nextPin, m_backPin, m_selectPin, m_homePin, m_pgmUpPin,  m_pgmDownPin,  m_BankUpPin,  m_BankDownPin, m_TGUpPin,  m_TGDownPin, 
 		m_prevMidi, m_nextMidi, m_backMidi, m_selectMidi, m_homeMidi, m_pgmUpMidi, m_pgmDownMidi, m_BankUpMidi, m_BankDownMidi, m_TGUpMidi, m_TGDownMidi,
 		m_TG1Midi, m_TG2Midi, m_TG3Midi, m_TG4Midi, m_TG5Midi, m_TG6Midi, m_TG7Midi, m_TG8Midi,
-		m_EffectsMidi, m_MasterVolumeMidi, m_PerformanceMidi
+		m_EffectsMidi, m_MasterVolumeMidi, m_PerformanceMidi,
+		m_TGVoiceMidi, m_TGBankMidi, m_TGVolumeMidi, m_TGPanMidi, m_TGReverbSendMidi, m_TGDetuneMidi,
+		m_TGCutoffMidi, m_TGResonanceMidi, m_TGPitchBendMidi, m_TGPortamentoMidi, m_TGPolyMonoMidi,
+		m_TGModulationMidi, m_TGChannelMidi, m_TGEditVoiceMidi
 	};
 	CUIButton::BtnTrigger triggers[MAX_BUTTONS] = {
 		// Normal buttons
 		m_prevAction, m_nextAction, m_backAction, m_selectAction, m_homeAction,
 		m_pgmUpAction, m_pgmDownAction, m_BankUpAction, m_BankDownAction, m_TGUpAction, m_TGDownAction, 
 		// MIDI Buttons only support a single click (at present)
+				CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick,
 		CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick,
 		CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick,
 		CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick,
 		CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick,
-		CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick,
-		CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick
+		CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick,
+		CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick,
+		CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick,
+		CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick
 	};
 	CUIButton::BtnEvent events[MAX_BUTTONS] = {
 		// Normal buttons
@@ -394,7 +414,21 @@ boolean CUIButtons::Initialize (void)
 		CUIButton::BtnEventTG8,
 		CUIButton::BtnEventEffects,
 		CUIButton::BtnEventMasterVolume,
-		CUIButton::BtnEventPerformance
+		CUIButton::BtnEventPerformance,
+		CUIButton::BtnEventTGVoice,
+		CUIButton::BtnEventTGBank,
+		CUIButton::BtnEventTGVolume,
+		CUIButton::BtnEventTGPan,
+		CUIButton::BtnEventTGReverbSend,
+		CUIButton::BtnEventTGDetune,
+		CUIButton::BtnEventTGCutoff,
+		CUIButton::BtnEventTGResonance,
+		CUIButton::BtnEventTGPitchBend,
+		CUIButton::BtnEventTGPortamento,
+		CUIButton::BtnEventTGPolyMono,
+		CUIButton::BtnEventTGModulation,
+		CUIButton::BtnEventTGChannel,
+		CUIButton::BtnEventTGEditVoice
 	};
 
 	// Setup normal GPIO buttons first

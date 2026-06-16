@@ -439,6 +439,62 @@ void CUserInterface::UIButtonsEventHandler (CUIButton::BtnEvent Event)
 		m_Menu.EventHandler (CUIMenu::MenuEventPerformance);
 		break;
 
+	case CUIButton::BtnEventTGVoice:
+		m_Menu.EventHandler (CUIMenu::MenuEventTGVoice);
+		break;
+
+	case CUIButton::BtnEventTGBank:
+		m_Menu.EventHandler (CUIMenu::MenuEventTGBank);
+		break;
+
+	case CUIButton::BtnEventTGVolume:
+		m_Menu.EventHandler (CUIMenu::MenuEventTGVolume);
+		break;
+
+	case CUIButton::BtnEventTGPan:
+		m_Menu.EventHandler (CUIMenu::MenuEventTGPan);
+		break;
+
+	case CUIButton::BtnEventTGReverbSend:
+		m_Menu.EventHandler (CUIMenu::MenuEventTGReverbSend);
+		break;
+
+	case CUIButton::BtnEventTGDetune:
+		m_Menu.EventHandler (CUIMenu::MenuEventTGDetune);
+		break;
+
+	case CUIButton::BtnEventTGCutoff:
+		m_Menu.EventHandler (CUIMenu::MenuEventTGCutoff);
+		break;
+
+	case CUIButton::BtnEventTGResonance:
+		m_Menu.EventHandler (CUIMenu::MenuEventTGResonance);
+		break;
+
+	case CUIButton::BtnEventTGPitchBend:
+		m_Menu.EventHandler (CUIMenu::MenuEventTGPitchBend);
+		break;
+
+	case CUIButton::BtnEventTGPortamento:
+		m_Menu.EventHandler (CUIMenu::MenuEventTGPortamento);
+		break;
+
+	case CUIButton::BtnEventTGPolyMono:
+		m_Menu.EventHandler (CUIMenu::MenuEventTGPolyMono);
+		break;
+
+	case CUIButton::BtnEventTGModulation:
+		m_Menu.EventHandler (CUIMenu::MenuEventTGModulation);
+		break;
+
+	case CUIButton::BtnEventTGChannel:
+		m_Menu.EventHandler (CUIMenu::MenuEventTGChannel);
+		break;
+
+	case CUIButton::BtnEventTGEditVoice:
+		m_Menu.EventHandler (CUIMenu::MenuEventTGEditVoice);
+		break;
+
 	default:
 		break;
 	}

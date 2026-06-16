@@ -225,6 +225,20 @@ void CConfig::Load (void)
 	m_nMIDIButtonEffects = m_Properties.GetNumber ("MIDIButtonEffects", 0);
 	m_nMIDIButtonMasterVolume = m_Properties.GetNumber ("MIDIButtonMasterVolume", 0);
 	m_nMIDIButtonPerformance = m_Properties.GetNumber ("MIDIButtonPerformance", 0);
+	m_nMIDIButtonTGVoice = m_Properties.GetNumber ("MIDIButtonTGVoice", 0);
+	m_nMIDIButtonTGBank = m_Properties.GetNumber ("MIDIButtonTGBank", 0);
+	m_nMIDIButtonTGVolume = m_Properties.GetNumber ("MIDIButtonTGVolume", 0);
+	m_nMIDIButtonTGPan = m_Properties.GetNumber ("MIDIButtonTGPan", 0);
+	m_nMIDIButtonTGReverbSend = m_Properties.GetNumber ("MIDIButtonTGReverbSend", 0);
+	m_nMIDIButtonTGDetune = m_Properties.GetNumber ("MIDIButtonTGDetune", 0);
+	m_nMIDIButtonTGCutoff = m_Properties.GetNumber ("MIDIButtonTGCutoff", 0);
+	m_nMIDIButtonTGResonance = m_Properties.GetNumber ("MIDIButtonTGResonance", 0);
+	m_nMIDIButtonTGPitchBend = m_Properties.GetNumber ("MIDIButtonTGPitchBend", 0);
+	m_nMIDIButtonTGPortamento = m_Properties.GetNumber ("MIDIButtonTGPortamento", 0);
+	m_nMIDIButtonTGPolyMono = m_Properties.GetNumber ("MIDIButtonTGPolyMono", 0);
+	m_nMIDIButtonTGModulation = m_Properties.GetNumber ("MIDIButtonTGModulation", 0);
+	m_nMIDIButtonTGChannel = m_Properties.GetNumber ("MIDIButtonTGChannel", 0);
+	m_nMIDIButtonTGEditVoice = m_Properties.GetNumber ("MIDIButtonTGEditVoice", 0);
 	
 	m_bEncoderEnabled = m_Properties.GetNumber ("EncoderEnabled", 0) != 0;
 	m_nEncoderPinClock = m_Properties.GetNumber ("EncoderPinClock", 10);
@@ -832,6 +846,76 @@ unsigned CConfig::GetMIDIButtonMasterVolume (void) const
 unsigned CConfig::GetMIDIButtonPerformance (void) const
 {
 	return m_nMIDIButtonPerformance;
+}
+
+unsigned CConfig::GetMIDIButtonTGVoice (void) const
+{
+	return m_nMIDIButtonTGVoice;
+}
+
+unsigned CConfig::GetMIDIButtonTGBank (void) const
+{
+	return m_nMIDIButtonTGBank;
+}
+
+unsigned CConfig::GetMIDIButtonTGVolume (void) const
+{
+	return m_nMIDIButtonTGVolume;
+}
+
+unsigned CConfig::GetMIDIButtonTGPan (void) const
+{
+	return m_nMIDIButtonTGPan;
+}
+
+unsigned CConfig::GetMIDIButtonTGReverbSend (void) const
+{
+	return m_nMIDIButtonTGReverbSend;
+}
+
+unsigned CConfig::GetMIDIButtonTGDetune (void) const
+{
+	return m_nMIDIButtonTGDetune;
+}
+
+unsigned CConfig::GetMIDIButtonTGCutoff (void) const
+{
+	return m_nMIDIButtonTGCutoff;
+}
+
+unsigned CConfig::GetMIDIButtonTGResonance (void) const
+{
+	return m_nMIDIButtonTGResonance;
+}
+
+unsigned CConfig::GetMIDIButtonTGPitchBend (void) const
+{
+	return m_nMIDIButtonTGPitchBend;
+}
+
+unsigned CConfig::GetMIDIButtonTGPortamento (void) const
+{
+	return m_nMIDIButtonTGPortamento;
+}
+
+unsigned CConfig::GetMIDIButtonTGPolyMono (void) const
+{
+	return m_nMIDIButtonTGPolyMono;
+}
+
+unsigned CConfig::GetMIDIButtonTGModulation (void) const
+{
+	return m_nMIDIButtonTGModulation;
+}
+
+unsigned CConfig::GetMIDIButtonTGChannel (void) const
+{
+	return m_nMIDIButtonTGChannel;
+}
+
+unsigned CConfig::GetMIDIButtonTGEditVoice (void) const
+{
+	return m_nMIDIButtonTGEditVoice;
 }
 
 bool CConfig::GetEncoderEnabled (void) const

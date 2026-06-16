@@ -28,7 +28,7 @@
 #define BUTTONS_UPDATE_NUM_TICKS 100
 #define DEBOUNCE_TIME 20
 #define MAX_GPIO_BUTTONS 11  // 5 UI buttons, 6 Program/Bank/TG Select buttons
-#define MAX_MIDI_BUTTONS 22
+#define MAX_MIDI_BUTTONS 36
 #define MAX_BUTTONS (MAX_GPIO_BUTTONS+MAX_MIDI_BUTTONS)
 
 class CUIButtons;
@@ -69,7 +69,21 @@ public:
 		BtnEventEffects = 20,
 		BtnEventMasterVolume = 21,
 		BtnEventPerformance = 22,
-		BtnEventUnknown = 23
+		BtnEventTGVoice = 23,
+		BtnEventTGBank = 24,
+		BtnEventTGVolume = 25,
+		BtnEventTGPan = 26,
+		BtnEventTGReverbSend = 27,
+		BtnEventTGDetune = 28,
+		BtnEventTGCutoff = 29,
+		BtnEventTGResonance = 30,
+		BtnEventTGPitchBend = 31,
+		BtnEventTGPortamento = 32,
+		BtnEventTGPolyMono = 33,
+		BtnEventTGModulation = 34,
+		BtnEventTGChannel = 35,
+		BtnEventTGEditVoice = 36,
+		BtnEventUnknown = 37
 	};
 	
 	CUIButton (void);
@@ -199,6 +213,20 @@ private:
 	unsigned m_EffectsMidi;
 	unsigned m_MasterVolumeMidi;
 	unsigned m_PerformanceMidi;
+	unsigned m_TGVoiceMidi;
+	unsigned m_TGBankMidi;
+	unsigned m_TGVolumeMidi;
+	unsigned m_TGPanMidi;
+	unsigned m_TGReverbSendMidi;
+	unsigned m_TGDetuneMidi;
+	unsigned m_TGCutoffMidi;
+	unsigned m_TGResonanceMidi;
+	unsigned m_TGPitchBendMidi;
+	unsigned m_TGPortamentoMidi;
+	unsigned m_TGPolyMonoMidi;
+	unsigned m_TGModulationMidi;
+	unsigned m_TGChannelMidi;
+	unsigned m_TGEditVoiceMidi;
 
 	BtnEventHandler *m_eventHandler;
 	void *m_eventParam;

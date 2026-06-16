@@ -503,6 +503,62 @@ void CUIMenu::EventHandler (TMenuEvent Event)
 		MainMenuSelectHandler ("Performance");
 		break;
 
+	case MenuEventTGVoice:
+		TGMenuSelectHandler ("Voice");
+		break;
+
+	case MenuEventTGBank:
+		TGMenuSelectHandler ("Bank");
+		break;
+
+	case MenuEventTGVolume:
+		TGMenuSelectHandler ("Volume");
+		break;
+
+	case MenuEventTGPan:
+		TGMenuSelectHandler ("Pan");
+		break;
+
+	case MenuEventTGReverbSend:
+		TGMenuSelectHandler ("Reverb-Send");
+		break;
+
+	case MenuEventTGDetune:
+		TGMenuSelectHandler ("Detune");
+		break;
+
+	case MenuEventTGCutoff:
+		TGMenuSelectHandler ("Cutoff");
+		break;
+
+	case MenuEventTGResonance:
+		TGMenuSelectHandler ("Resonance");
+		break;
+
+	case MenuEventTGPitchBend:
+		TGMenuSelectHandler ("Pitch Bend");
+		break;
+
+	case MenuEventTGPortamento:
+		TGMenuSelectHandler ("Portamento");
+		break;
+
+	case MenuEventTGPolyMono:
+		TGMenuSelectHandler ("Poly/Mono");
+		break;
+
+	case MenuEventTGModulation:
+		TGMenuSelectHandler ("Modulation");
+		break;
+
+	case MenuEventTGChannel:
+		TGMenuSelectHandler ("Channel");
+		break;
+
+	case MenuEventTGEditVoice:
+		TGMenuSelectHandler ("Edit Voice");
+		break;
+
 	default:
 		(*m_pParentMenu[m_nCurrentMenuItem].Handler) (this, Event);
 		break;
@@ -1724,6 +1780,29 @@ void CUIMenu::TGSelectHandler (unsigned nTG)
 		return;
 	}
 
+	// Preserve the currently selected TG sub-function when moving between TGs.
+	// Example: if the UI is on TG1 -> Cutoff, selecting TG2 should land on
+	// TG2 -> Cutoff, not TG2 -> Voice.
+	unsigned nSelection = 0;
+	if (m_pCurrentMenu == s_TGMenu)
+	{
+		nSelection = m_nCurrentSelection;
+	}
+	else if (m_nCurrentMenuDepth >= 1 && m_MenuStackMenu[1] == s_TGMenu)
+	{
+		nSelection = m_nMenuStackSelection[1];
+	}
+
+	unsigned nTGMenuItems = 0;
+	while (s_TGMenu[nTGMenuItems].Name)
+	{
+		++nTGMenuItems;
+	}
+	if (nSelection >= nTGMenuItems)
+	{
+		nSelection = 0;
+	}
+
 	// Set menu to the appropriate TG menu as follows:
 	//  Top = Root
 	//  Menu [0] = Main
@@ -1731,11 +1810,73 @@ void CUIMenu::TGSelectHandler (unsigned nTG)
 	m_pParentMenu = s_MainMenu;
 	m_pCurrentMenu = s_TGMenu;
 	m_nCurrentMenuItem = nTG;
-	m_nCurrentSelection = 0;
-	m_nCurrentParameter = nTG;
+	m_nCurrentSelection = nSelection;
+	m_nCurrentParameter = s_TGMenu[nSelection].Parameter;
 	m_nCurrentMenuDepth = 1;
 
 	// Place the main menu on the stack with Root as the parent
+	m_MenuStackParent[0] = s_MenuRoot;
+	m_MenuStackMenu[0] = s_MainMenu;
+	m_nMenuStackItem[0] = 0;
+	m_nMenuStackSelection[0] = nTG;
+	m_nMenuStackParameter[0] = 0;
+
+	EventHandler (MenuEventUpdate);
+}
+
+void CUIMenu::TGMenuSelectHandler (const char *pName)
+{
+	if (pName == 0)
+	{
+		return;
+	}
+
+	unsigned nTGMenuIndex = 0;
+	while (s_TGMenu[nTGMenuIndex].Name)
+	{
+		if (strcmp (s_TGMenu[nTGMenuIndex].Name, pName) == 0)
+		{
+			break;
+		}
+		++nTGMenuIndex;
+	}
+
+	if (!s_TGMenu[nTGMenuIndex].Name)
+	{
+		return;
+	}
+
+	// Keep the current TG if we are already inside a TG context.
+	unsigned nTG = 0;
+	if (m_pCurrentMenu == s_TGMenu)
+	{
+		nTG = m_nCurrentMenuItem;
+	}
+	else if (m_nCurrentMenuDepth >= 1 && m_MenuStackMenu[1] == s_TGMenu)
+	{
+		nTG = m_nMenuStackSelection[0];
+	}
+	else if (m_pCurrentMenu == s_MainMenu && m_nCurrentSelection < m_nToneGenerators)
+	{
+		nTG = m_nCurrentSelection;
+	}
+	else if (m_MenuStackMenu[0] == s_MainMenu && m_nMenuStackSelection[0] < m_nToneGenerators)
+	{
+		nTG = m_nMenuStackSelection[0];
+	}
+
+	if (nTG >= m_nToneGenerators)
+	{
+		nTG = 0;
+	}
+
+	m_pParentMenu = s_MainMenu;
+	m_pCurrentMenu = s_TGMenu;
+	m_nCurrentMenuItem = nTG;
+	m_nCurrentSelection = nTGMenuIndex;
+	m_nCurrentParameter = s_TGMenu[nTGMenuIndex].Parameter;
+	m_nCurrentMenuDepth = 1;
+
 	m_MenuStackParent[0] = s_MenuRoot;
 	m_MenuStackMenu[0] = s_MainMenu;
 	m_nMenuStackItem[0] = 0;
