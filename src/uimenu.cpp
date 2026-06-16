@@ -1780,6 +1780,29 @@ void CUIMenu::TGSelectHandler (unsigned nTG)
 		return;
 	}
 
+	// If we are already inside a TG branch below the TG menu itself, keep the
+	// exact depth of the current UI position. This preserves not only the TG
+	// sub-function (Cutoff, Detune, Volume, etc.) but also whether the user is
+	// already editing the value.
+	//
+	// Example:
+	//   TG2 -> Cutoff -> value 99
+	//   press direct TG1 button
+	//   result: TG1 -> Cutoff -> value, ready to edit
+	//
+	// The value editors get the active TG from m_nMenuStackParameter[1], so this
+	// is the critical field to update when jumping between TGs.
+	if (m_nCurrentMenuDepth >= 2 && m_MenuStackMenu[0] == s_MainMenu &&
+	    m_MenuStackMenu[1] == s_TGMenu && m_pCurrentMenu != s_TGMenu)
+	{
+		m_nMenuStackSelection[0] = nTG;
+		m_nMenuStackItem[1] = nTG;
+		m_nMenuStackParameter[1] = nTG;
+
+		EventHandler (MenuEventUpdate);
+		return;
+	}
+
 	// Preserve the currently selected TG sub-function when moving between TGs.
 	// Example: if the UI is on TG1 -> Cutoff, selecting TG2 should land on
 	// TG2 -> Cutoff, not TG2 -> Voice.
