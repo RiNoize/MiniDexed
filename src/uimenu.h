@@ -86,6 +86,8 @@ public:
 
 	void EventHandler (TMenuEvent Event);
 
+	void Process (void);
+
 	// Jump the UI to the existing voice-edit menu item that corresponds to
 	// a raw DX7 voice data element changed by incoming SysEx.
 	void ShowVoiceDataElement (unsigned nTG, unsigned nVoiceDataElement, unsigned nValue);
@@ -158,6 +160,12 @@ private:
 	void TGMenuSelectHandler (const char *pName);
 	void MainMenuSelectHandler (const char *pName);
 
+	void ArmPerformanceOverviewTimer (unsigned nDelayMS, bool bShowOverviewNext);
+	void DisplayPerformanceTGOverview (void);
+	bool IsPerformanceMenuActive (void) const;
+	static std::string Short3 (const std::string &Text);
+	static void PerformanceOverviewTimerHandler (TKernelTimerHandle hTimer, void *pParam, void *pContext);
+
 	static void TimerHandler (TKernelTimerHandle hTimer, void *pParam, void *pContext);
 
 	static void InputTxt (CUIMenu *pUIMenu, TMenuEvent Event);
@@ -216,6 +224,9 @@ private:
 	bool m_bSplashShow=false;
 	bool m_bSysExDisplayActive=false;
 	unsigned m_nSysExDisplaySequence=0;
+	unsigned m_nPerformanceOverviewSequence=0;
+	bool m_bPerformanceOverviewPage=false;
+	bool m_bPerformanceOverviewSuppressArm=false;
 
 };
 

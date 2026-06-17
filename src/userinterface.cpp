@@ -202,6 +202,8 @@ bool CUserInterface::Initialize (void)
 
 void CUserInterface::Process (void)
 {
+	m_Menu.Process ();
+
 	if (m_pLCDBuffered)
 	{
 		m_pLCDBuffered->Update ();

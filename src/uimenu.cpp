@@ -398,6 +398,12 @@ void CUIMenu::EventHandler (TMenuEvent Event)
 		m_bSysExDisplayActive = false;
 	}
 
+	if (Event != MenuEventUpdate && Event != MenuEventUpdateParameter)
+	{
+		// Any real user action cancels pending automatic performance-page flips.
+		m_nPerformanceOverviewSequence++;
+	}
+
 	switch (Event)
 	{
 	case MenuEventBack:				// pop menu
@@ -562,6 +568,115 @@ void CUIMenu::EventHandler (TMenuEvent Event)
 	default:
 		(*m_pParentMenu[m_nCurrentMenuItem].Handler) (this, Event);
 		break;
+	}
+}
+
+
+void CUIMenu::Process (void)
+{
+	// Reserved for lightweight UI polling. The performance overview uses
+	// kernel timers so the normal LCD page is not redrawn on every main loop.
+}
+
+bool CUIMenu::IsPerformanceMenuActive (void) const
+{
+	return m_pParentMenu &&
+	       m_pParentMenu[m_nCurrentMenuItem].Handler == PerformanceMenu &&
+	       !m_bPerformanceDeleteMode &&
+	       !m_bSplashShow &&
+	       !m_bSysExDisplayActive;
+}
+
+std::string CUIMenu::Short3 (const std::string &Text)
+{
+	std::string Result;
+	for (unsigned i = 0; i < Text.length () && Result.length () < 3; i++)
+	{
+		char c = Text[i];
+		if (c == ' ' || c == '\t')
+		{
+			continue;
+		}
+		if (c >= 'a' && c <= 'z')
+		{
+			c = c - 'a' + 'A';
+		}
+		Result += c;
+	}
+
+	while (Result.length () < 3)
+	{
+		Result += '-';
+	}
+
+	return Result;
+}
+
+void CUIMenu::DisplayPerformanceTGOverview (void)
+{
+	std::string Line1;
+	std::string Line2;
+
+	for (unsigned nTG = 0; nTG < 8; nTG++)
+	{
+		std::string Token = "---";
+
+		if (nTG < m_nToneGenerators)
+		{
+			int nChannel = m_pMiniDexed->GetTGParameter (CMiniDexed::TGParameterMIDIChannel, nTG);
+			if (nChannel != CMIDIDevice::Disabled)
+			{
+				Token = Short3 (m_pMiniDexed->GetVoiceName (nTG));
+			}
+		}
+
+		std::string &Line = (nTG < 4) ? Line1 : Line2;
+		if (!Line.empty ())
+		{
+			Line += " ";
+		}
+		Line += Token;
+	}
+
+	m_pUI->DisplayWrite ("", Line1.c_str (), Line2.c_str (), false, false);
+}
+
+void CUIMenu::ArmPerformanceOverviewTimer (unsigned nDelayMS, bool bShowOverviewNext)
+{
+	m_nPerformanceOverviewSequence++;
+	m_bPerformanceOverviewPage = bShowOverviewNext;
+
+	CTimer::Get ()->StartKernelTimer (MSEC2HZ (nDelayMS), PerformanceOverviewTimerHandler,
+					 (void *)(uintptr_t) m_nPerformanceOverviewSequence, this);
+}
+
+void CUIMenu::PerformanceOverviewTimerHandler (TKernelTimerHandle hTimer, void *pParam, void *pContext)
+{
+	CUIMenu *pThis = (CUIMenu *) pContext;
+	assert (pThis);
+
+	unsigned nSequence = (unsigned)(uintptr_t) pParam;
+	if (nSequence != pThis->m_nPerformanceOverviewSequence)
+	{
+		return;
+	}
+
+	if (!pThis->IsPerformanceMenuActive ())
+	{
+		return;
+	}
+
+	if (pThis->m_bPerformanceOverviewPage)
+	{
+		pThis->DisplayPerformanceTGOverview ();
+		pThis->ArmPerformanceOverviewTimer (4000, false);
+	}
+	else
+	{
+		pThis->m_bPerformanceOverviewSuppressArm = true;
+		pThis->EventHandler (MenuEventUpdate);
+		pThis->m_bPerformanceOverviewSuppressArm = false;
+		pThis->ArmPerformanceOverviewTimer (2000, true);
 	}
 }
 
@@ -2179,6 +2294,14 @@ void CUIMenu::PerformanceMenu (CUIMenu *pUIMenu, TMenuEvent Event)
 		pUIMenu->m_pUI->DisplayWrite (pUIMenu->m_pParentMenu[pUIMenu->m_nCurrentMenuItem].Name, nPSelected.c_str(),
 						  Value.c_str (), true, true);
 //						 (int) nValue > 0, (int) nValue < (int) pUIMenu->m_pMiniDexed->GetLastPerformance());
+
+		if (!pUIMenu->m_bPerformanceOverviewSuppressArm)
+		{
+			// Keep the normal performance screen for 2 seconds, then alternate to
+			// the compact TG voice overview for 4 seconds. Any user action or
+			// performance change restarts this cycle from the normal page.
+			pUIMenu->ArmPerformanceOverviewTimer (2000, true);
+		}
 	}
 	else
 	{
