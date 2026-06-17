@@ -408,11 +408,33 @@ void CUIMenu::EventHandler (TMenuEvent Event)
 		// "overview selectors": Cutoff shows all TG cutoffs, Pan shows all TG pans,
 		// Volume shows all TG volumes, etc. This keeps the 1602 as a performance
 		// monitor instead of jumping into one TG menu.
-		if (IsPerformanceMenuActive () && HandlePerformanceOverviewShortcut (Event))
+		if (IsPerformanceMenuActive ())
 		{
-			DisplayPerformanceTGOverview ();
-			ArmPerformanceOverviewTimer (4000, false);
-			return;
+			if (HandlePerformanceOverviewShortcut (Event))
+			{
+				DisplayPerformanceTGOverview ();
+				ArmPerformanceOverviewTimer (4000, false);
+				return;
+			}
+
+			// When the compact Performance overview is showing a TG parameter
+			// (Cutoff, Volume, Pan, etc.), direct TG buttons select which TG will be
+			// edited by the encoder. They do not leave the Performance overview.
+			if (HandlePerformanceOverviewTGSelect (Event))
+			{
+				DisplayPerformanceTGOverview ();
+				ArmPerformanceOverviewTimer (4000, false);
+				return;
+			}
+
+			// Encoder steps edit the selected TG/parameter while staying on the
+			// compact overview page, so the changed value can be watched live.
+			if (HandlePerformanceOverviewEditStep (Event))
+			{
+				DisplayPerformanceTGOverview ();
+				ArmPerformanceOverviewTimer (4000, false);
+				return;
+			}
 		}
 	}
 
@@ -630,6 +652,7 @@ bool CUIMenu::HandlePerformanceOverviewShortcut (TMenuEvent Event)
 	{
 	case MenuEventTGVoice:
 		m_bPerformanceOverviewShowTGParameter = false;
+		m_bPerformanceOverviewEditActive = false;
 		return true;
 
 	case MenuEventTGVolume:
@@ -685,6 +708,91 @@ bool CUIMenu::HandlePerformanceOverviewShortcut (TMenuEvent Event)
 	default:
 		return false;
 	}
+}
+
+bool CUIMenu::GetPerformanceOverviewTGFromEvent (TMenuEvent Event, unsigned *pTG)
+{
+	assert (pTG);
+
+	switch (Event)
+	{
+	case MenuEventTG1: *pTG = 0; return true;
+	case MenuEventTG2: *pTG = 1; return true;
+	case MenuEventTG3: *pTG = 2; return true;
+	case MenuEventTG4: *pTG = 3; return true;
+	case MenuEventTG5: *pTG = 4; return true;
+	case MenuEventTG6: *pTG = 5; return true;
+	case MenuEventTG7: *pTG = 6; return true;
+	case MenuEventTG8: *pTG = 7; return true;
+	default: return false;
+	}
+}
+
+bool CUIMenu::HandlePerformanceOverviewTGSelect (TMenuEvent Event)
+{
+	if (!m_bPerformanceOverviewShowTGParameter)
+	{
+		return false;
+	}
+
+	unsigned nTG = 0;
+	if (!GetPerformanceOverviewTGFromEvent (Event, &nTG))
+	{
+		return false;
+	}
+
+	if (nTG >= m_nToneGenerators)
+	{
+		return true;
+	}
+
+	m_nPerformanceOverviewEditTG = nTG;
+	m_bPerformanceOverviewEditActive = true;
+	return true;
+}
+
+bool CUIMenu::HandlePerformanceOverviewEditStep (TMenuEvent Event)
+{
+	if (!m_bPerformanceOverviewShowTGParameter || !m_bPerformanceOverviewEditActive)
+	{
+		return false;
+	}
+
+	if (Event != MenuEventStepDown && Event != MenuEventStepUp)
+	{
+		return false;
+	}
+
+	unsigned nTG = m_nPerformanceOverviewEditTG;
+	if (nTG >= m_nToneGenerators)
+	{
+		return true;
+	}
+
+	CMiniDexed::TTGParameter Param =
+		(CMiniDexed::TTGParameter) m_nPerformanceOverviewTGParameter;
+	const TParameter &rParam = s_TGParameter[Param];
+
+	int nValue = m_pMiniDexed->GetTGParameter (Param, nTG);
+	if (Event == MenuEventStepDown)
+	{
+		nValue -= rParam.Increment;
+		if (nValue < rParam.Minimum)
+		{
+			nValue = rParam.Minimum;
+		}
+	}
+	else
+	{
+		nValue += rParam.Increment;
+		if (nValue > rParam.Maximum)
+		{
+			nValue = rParam.Maximum;
+		}
+	}
+
+	m_pMiniDexed->SetTGParameter (Param, nValue, nTG);
+	return true;
 }
 
 std::string CUIMenu::FormatOverviewTGParameterValue (unsigned nTGParameter, int nValue)

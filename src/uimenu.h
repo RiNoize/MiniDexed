@@ -163,6 +163,9 @@ private:
 	void ArmPerformanceOverviewTimer (unsigned nDelayMS, bool bShowOverviewNext);
 	void DisplayPerformanceTGOverview (void);
 	bool HandlePerformanceOverviewShortcut (TMenuEvent Event);
+	bool HandlePerformanceOverviewTGSelect (TMenuEvent Event);
+	bool HandlePerformanceOverviewEditStep (TMenuEvent Event);
+	static bool GetPerformanceOverviewTGFromEvent (TMenuEvent Event, unsigned *pTG);
 	bool IsPerformanceMenuActive (void) const;
 	static std::string Short3 (const std::string &Text);
 	static std::string FormatOverviewTGParameterValue (unsigned nTGParameter, int nValue);
@@ -231,6 +234,8 @@ private:
 	bool m_bPerformanceOverviewSuppressArm=false;
 	bool m_bPerformanceOverviewShowTGParameter=false;
 	unsigned m_nPerformanceOverviewTGParameter=0;
+	bool m_bPerformanceOverviewEditActive=false;
+	unsigned m_nPerformanceOverviewEditTG=0;
 
 };
 
