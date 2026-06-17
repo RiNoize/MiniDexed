@@ -32,6 +32,7 @@
 #include <cstddef>
 #include <stdint.h>
 #include <string.h>
+#include <stdio.h>
 
 using namespace std;
 LOGMODULE ("uimenu");
@@ -402,6 +403,17 @@ void CUIMenu::EventHandler (TMenuEvent Event)
 	{
 		// Any real user action cancels pending automatic performance-page flips.
 		m_nPerformanceOverviewSequence++;
+
+		// In the Performance screen, TG parameter shortcut buttons become
+		// "overview selectors": Cutoff shows all TG cutoffs, Pan shows all TG pans,
+		// Volume shows all TG volumes, etc. This keeps the 1602 as a performance
+		// monitor instead of jumping into one TG menu.
+		if (IsPerformanceMenuActive () && HandlePerformanceOverviewShortcut (Event))
+		{
+			DisplayPerformanceTGOverview ();
+			ArmPerformanceOverviewTimer (4000, false);
+			return;
+		}
 	}
 
 	switch (Event)
@@ -612,6 +624,132 @@ std::string CUIMenu::Short3 (const std::string &Text)
 	return Result;
 }
 
+bool CUIMenu::HandlePerformanceOverviewShortcut (TMenuEvent Event)
+{
+	switch (Event)
+	{
+	case MenuEventTGVoice:
+		m_bPerformanceOverviewShowTGParameter = false;
+		return true;
+
+	case MenuEventTGVolume:
+		m_bPerformanceOverviewShowTGParameter = true;
+		m_nPerformanceOverviewTGParameter = CMiniDexed::TGParameterVolume;
+		return true;
+
+	case MenuEventTGPan:
+		m_bPerformanceOverviewShowTGParameter = true;
+		m_nPerformanceOverviewTGParameter = CMiniDexed::TGParameterPan;
+		return true;
+
+	case MenuEventTGReverbSend:
+		m_bPerformanceOverviewShowTGParameter = true;
+		m_nPerformanceOverviewTGParameter = CMiniDexed::TGParameterReverbSend;
+		return true;
+
+	case MenuEventTGDetune:
+		m_bPerformanceOverviewShowTGParameter = true;
+		m_nPerformanceOverviewTGParameter = CMiniDexed::TGParameterMasterTune;
+		return true;
+
+	case MenuEventTGCutoff:
+		m_bPerformanceOverviewShowTGParameter = true;
+		m_nPerformanceOverviewTGParameter = CMiniDexed::TGParameterCutoff;
+		return true;
+
+	case MenuEventTGResonance:
+		m_bPerformanceOverviewShowTGParameter = true;
+		m_nPerformanceOverviewTGParameter = CMiniDexed::TGParameterResonance;
+		return true;
+
+	case MenuEventTGPitchBend:
+		m_bPerformanceOverviewShowTGParameter = true;
+		m_nPerformanceOverviewTGParameter = CMiniDexed::TGParameterPitchBendRange;
+		return true;
+
+	case MenuEventTGPortamento:
+		m_bPerformanceOverviewShowTGParameter = true;
+		m_nPerformanceOverviewTGParameter = CMiniDexed::TGParameterPortamentoTime;
+		return true;
+
+	case MenuEventTGPolyMono:
+		m_bPerformanceOverviewShowTGParameter = true;
+		m_nPerformanceOverviewTGParameter = CMiniDexed::TGParameterMonoMode;
+		return true;
+
+	case MenuEventTGChannel:
+		m_bPerformanceOverviewShowTGParameter = true;
+		m_nPerformanceOverviewTGParameter = CMiniDexed::TGParameterMIDIChannel;
+		return true;
+
+	default:
+		return false;
+	}
+}
+
+std::string CUIMenu::FormatOverviewTGParameterValue (unsigned nTGParameter, int nValue)
+{
+	char Buffer[4];
+	Buffer[3] = '\0';
+
+	switch (nTGParameter)
+	{
+	case CMiniDexed::TGParameterPan:
+	{
+		// MiniDexed stores pan as 0..127. Show it as a compact center-based
+		// scale for the 1602: -7 = full left, 0 = center, +7 = full right.
+		int nPan = 0;
+		if (nValue < 64)
+		{
+			nPan = -((64 - nValue) * 7 + 32) / 64;
+		}
+		else if (nValue > 64)
+		{
+			nPan = ((nValue - 64) * 7 + 31) / 63;
+		}
+
+		if (nPan < 0)
+		{
+			snprintf (Buffer, sizeof Buffer, "%2d", nPan);
+		}
+		else if (nPan > 0)
+		{
+			snprintf (Buffer, sizeof Buffer, "+%d", nPan);
+		}
+		else
+		{
+			strcpy (Buffer, " 0");
+		}
+		return std::string (Buffer);
+	}
+
+	case CMiniDexed::TGParameterMIDIChannel:
+		if (nValue == CMIDIDevice::Disabled)
+		{
+			return "---";
+		}
+		break;
+
+	case CMiniDexed::TGParameterMonoMode:
+		return nValue ? "MON" : "POL";
+
+	default:
+		break;
+	}
+
+	if (nValue < -99)
+	{
+		nValue = -99;
+	}
+	else if (nValue > 999)
+	{
+		nValue = 999;
+	}
+
+	snprintf (Buffer, sizeof Buffer, "%3d", nValue);
+	return std::string (Buffer);
+}
+
 void CUIMenu::DisplayPerformanceTGOverview (void)
 {
 	std::string Line1;
@@ -626,7 +764,16 @@ void CUIMenu::DisplayPerformanceTGOverview (void)
 			int nChannel = m_pMiniDexed->GetTGParameter (CMiniDexed::TGParameterMIDIChannel, nTG);
 			if (nChannel != CMIDIDevice::Disabled)
 			{
-				Token = Short3 (m_pMiniDexed->GetVoiceName (nTG));
+				if (m_bPerformanceOverviewShowTGParameter)
+				{
+					int nValue = m_pMiniDexed->GetTGParameter (
+						(CMiniDexed::TTGParameter) m_nPerformanceOverviewTGParameter, nTG);
+					Token = FormatOverviewTGParameterValue (m_nPerformanceOverviewTGParameter, nValue);
+				}
+				else
+				{
+					Token = Short3 (m_pMiniDexed->GetVoiceName (nTG));
+				}
 			}
 		}
 
