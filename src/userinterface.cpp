@@ -202,8 +202,6 @@ bool CUserInterface::Initialize (void)
 
 void CUserInterface::Process (void)
 {
-	m_Menu.Process ();
-
 	if (m_pLCDBuffered)
 	{
 		m_pLCDBuffered->Update ();
@@ -227,6 +225,11 @@ void CUserInterface::DisplayChanged (void)
 void CUserInterface::ShowVoiceDataElement (unsigned nTG, unsigned nVoiceDataElement, unsigned nValue)
 {
 	m_Menu.ShowVoiceDataElement (nTG, nVoiceDataElement, nValue);
+}
+
+void CUserInterface::NotifyMIDISystemCCParameterChanged (unsigned nTGParameter, unsigned nTG)
+{
+	m_Menu.NotifyMIDISystemCCParameterChanged (nTGParameter, nTG);
 }
 
 void CUserInterface::DisplayWrite (const char *pMenu, const char *pParam, const char *pValue,
