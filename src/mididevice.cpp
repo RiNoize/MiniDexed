@@ -734,20 +734,12 @@ bool CMIDIDevice::HandleMIDISystemCC(const u8 ucCC, const u8 ucCCval)
 		if (m_nMIDISystemCCVol != 0) {
 			if (ucCC == MIDISystemCCMap[m_nMIDISystemCCVol][tg]) {
 				m_pSynthesizer->SetVolume (ucCCval, tg);
-				if (m_pUI)
-				{
-					m_pUI->NotifyMIDISystemCCParameterChanged (CMiniDexed::TGParameterVolume, tg);
-				}
 				return true;
 			}
 		}
 		if (m_nMIDISystemCCPan != 0) {
 			if (ucCC == MIDISystemCCMap[m_nMIDISystemCCPan][tg]) {
 				m_pSynthesizer->SetPan (ucCCval, tg);
-				if (m_pUI)
-				{
-					m_pUI->NotifyMIDISystemCCParameterChanged (CMiniDexed::TGParameterPan, tg);
-				}
 				return true;
 			}
 		}
@@ -762,10 +754,6 @@ bool CMIDIDevice::HandleMIDISystemCC(const u8 ucCC, const u8 ucCCval)
 				{
 					// Scale to -99 to +99 cents
 					m_pSynthesizer->SetMasterTune (maplong (ucCCval, 1, 127, -99, 99), tg);
-				}
-				if (m_pUI)
-				{
-					m_pUI->NotifyMIDISystemCCParameterChanged (CMiniDexed::TGParameterMasterTune, tg);
 				}
 				return true;
 			}

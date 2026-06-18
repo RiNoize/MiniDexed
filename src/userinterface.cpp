@@ -227,11 +227,6 @@ void CUserInterface::ShowVoiceDataElement (unsigned nTG, unsigned nVoiceDataElem
 	m_Menu.ShowVoiceDataElement (nTG, nVoiceDataElement, nValue);
 }
 
-void CUserInterface::NotifyMIDISystemCCParameterChanged (unsigned nTGParameter, unsigned nTG)
-{
-	m_Menu.NotifyMIDISystemCCParameterChanged (nTGParameter, nTG);
-}
-
 void CUserInterface::DisplayWrite (const char *pMenu, const char *pParam, const char *pValue,
 				   bool bArrowDown, bool bArrowUp)
 {

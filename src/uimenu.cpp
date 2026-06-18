@@ -936,38 +936,6 @@ void CUIMenu::PerformanceOverviewTimerHandler (TKernelTimerHandle hTimer, void *
 }
 
 
-void CUIMenu::NotifyMIDISystemCCParameterChanged (unsigned nTGParameter, unsigned nTG)
-{
-	if (!IsPerformanceMenuActive ())
-	{
-		return;
-	}
-
-	switch (nTGParameter)
-	{
-	case CMiniDexed::TGParameterVolume:
-	case CMiniDexed::TGParameterPan:
-	case CMiniDexed::TGParameterMasterTune:
-		break;
-
-	default:
-		return;
-	}
-
-	m_bPerformanceOverviewShowTGParameter = true;
-	m_nPerformanceOverviewTGParameter = nTGParameter;
-
-	if (nTG < m_nToneGenerators)
-	{
-		m_nPerformanceOverviewEditTG = nTG;
-		m_bPerformanceOverviewEditActive = true;
-	}
-
-	DisplayPerformanceTGOverview ();
-	ArmPerformanceOverviewTimer (4000, false);
-}
-
-
 void CUIMenu::ShowVoiceDataElement (unsigned nTG, unsigned nVoiceDataElement, unsigned nValue)
 {
 	if (nTG >= m_nToneGenerators)

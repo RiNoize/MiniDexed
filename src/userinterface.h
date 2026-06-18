@@ -49,7 +49,6 @@ public:
 
 	// Show the existing voice-edit menu item for a raw DX7 voice data element.
 	void ShowVoiceDataElement (unsigned nTG, unsigned nVoiceDataElement, unsigned nValue);
-	void NotifyMIDISystemCCParameterChanged (unsigned nTGParameter, unsigned nTG);
 
 	// Write to display in this format:
 	// +----------------+

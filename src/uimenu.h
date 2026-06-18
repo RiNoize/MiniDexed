@@ -91,11 +91,6 @@ public:
 	// Jump the UI to the existing voice-edit menu item that corresponds to
 	// a raw DX7 voice data element changed by incoming SysEx.
 	void ShowVoiceDataElement (unsigned nTG, unsigned nVoiceDataElement, unsigned nValue);
-
-	// Called when external MIDI System CC maps change a live TG parameter
-	// (for example MIDISystemCCVol/Pan/Detune). Keeps the Performance overview
-	// on the relevant parameter page and refreshes it in real time.
-	void NotifyMIDISystemCCParameterChanged (unsigned nTGParameter, unsigned nTG);
 	
 private:
 	typedef void TMenuHandler (CUIMenu *pUIMenu, TMenuEvent Event);
