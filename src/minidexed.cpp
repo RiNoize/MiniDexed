@@ -700,6 +700,7 @@ void CMiniDexed::SetVolume (unsigned nVolume, unsigned nTG)
 	m_pTG[nTG]->setGain ((m_nVolume[nTG] * m_nExpression[nTG]) / (127.0f * 127.0f));
 
 	m_UI.ParameterChanged ();
+	m_UI.NotifyMIDISystemCCParameterChanged (TGParameterVolume, nTG);
 }
 
 void CMiniDexed::SetExpression (unsigned nExpression, unsigned nTG)
@@ -732,6 +733,7 @@ void CMiniDexed::SetPan (unsigned nPan, unsigned nTG)
 	reverb_send_mixer->pan(nTG,mapfloat(nPan,0,127,0.0f,1.0f));
 
 	m_UI.ParameterChanged ();
+	m_UI.NotifyMIDISystemCCParameterChanged (TGParameterPan, nTG);
 }
 
 void CMiniDexed::SetReverbSend (unsigned nReverbSend, unsigned nTG)
@@ -761,6 +763,7 @@ void CMiniDexed::SetMasterTune (int nMasterTune, unsigned nTG)
 	m_pTG[nTG]->setMasterTune ((int8_t) nMasterTune);
 
 	m_UI.ParameterChanged ();
+	m_UI.NotifyMIDISystemCCParameterChanged (TGParameterMasterTune, nTG);
 }
 
 void CMiniDexed::SetCutoff (int nCutoff, unsigned nTG)
