@@ -399,6 +399,20 @@ void CUIMenu::EventHandler (TMenuEvent Event)
 		m_bSysExDisplayActive = false;
 	}
 
+	// External MIDI CC changes (CC7/10/94 or MIDISystemCCVol/Pan/Detune)
+	// already update the real TG values in CMiniDexed and call ParameterChanged().
+	// If the Performance overview is currently showing a TG parameter page, only
+	// repaint that existing overview here. Do not switch pages from the MIDI path
+	// and do not start extra timers for every incoming pot/fader message; doing so
+	// can make the LCD/menu feel erratic during dense CC streams.
+	if (Event == MenuEventUpdateParameter &&
+	    IsPerformanceMenuActive () &&
+	    m_bPerformanceOverviewShowTGParameter)
+	{
+		DisplayPerformanceTGOverview ();
+		return;
+	}
+
 	if (Event != MenuEventUpdate && Event != MenuEventUpdateParameter)
 	{
 		// Any real user action cancels pending automatic performance-page flips.
