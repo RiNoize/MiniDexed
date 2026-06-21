@@ -923,6 +923,17 @@ void CUIMenu::DisplayPerformanceTGOverview (void)
 
 void CUIMenu::ArmPerformanceOverviewTimer (unsigned nDelayMS, bool bShowOverviewNext)
 {
+	// When Performance page 2 is being used as a live parameter monitor
+	// (Volume, Pan, Detune, Octave, Cutoff, etc.), keep it on screen and refresh
+	// it periodically. This avoids touching the MIDI input path: the display
+	// simply re-reads the current MiniDexed values, including values changed by
+	// external MIDI CC controllers such as MIDISystemCCVol/Pan/Detune/Octave.
+	if (m_bPerformanceOverviewShowTGParameter && nDelayMS >= 4000 && !bShowOverviewNext)
+	{
+		nDelayMS = 300;
+		bShowOverviewNext = true;
+	}
+
 	m_nPerformanceOverviewSequence++;
 	m_bPerformanceOverviewPage = bShowOverviewNext;
 
