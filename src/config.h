@@ -137,6 +137,7 @@ public:
 	unsigned GetMIDISystemCCPan (void) const;
 	unsigned GetMIDISystemCCDetune (void) const;
 	unsigned GetMIDISystemCCOctave (void) const;
+	unsigned GetMIDISystemCCAltPot (void) const;
 	unsigned GetMIDIGlobalExpression (void) const;
 
 	// HD44780 LCD
@@ -256,6 +257,8 @@ public:
 	unsigned GetMIDIButtonTGModulation (void) const;
 	unsigned GetMIDIButtonTGChannel (void) const;
 	unsigned GetMIDIButtonTGEditVoice (void) const;
+	unsigned GetMIDIButtonAltPotPrev (void) const;
+	unsigned GetMIDIButtonAltPotNext (void) const;
 	
 	// KY-040 Rotary Encoder
 	// GPIO pin numbers are chip numbers, not header positions
@@ -323,6 +326,7 @@ private:
 	unsigned m_nMIDISystemCCPan;
 	unsigned m_nMIDISystemCCDetune;
 	unsigned m_nMIDISystemCCOctave;
+	unsigned m_nMIDISystemCCAltPot;
 	unsigned m_nMIDIGlobalExpression;
 
 	bool m_bLCDEnabled;
@@ -425,6 +429,8 @@ private:
 	unsigned m_nMIDIButtonTGModulation;
 	unsigned m_nMIDIButtonTGChannel;
 	unsigned m_nMIDIButtonTGEditVoice;
+	unsigned m_nMIDIButtonAltPotPrev;
+	unsigned m_nMIDIButtonAltPotNext;
 
 	bool m_bEncoderEnabled;
 	unsigned m_nEncoderPinClock;

@@ -77,7 +77,7 @@ private:
 	unsigned m_nMIDISystemCCVol;
 	unsigned m_nMIDISystemCCPan;
 	unsigned m_nMIDISystemCCDetune;
-	unsigned m_nMIDISystemCCOctave;
+	unsigned m_nMIDISystemCCAltPot;
 	u32	 m_MIDISystemCCBitmap[4]; // to allow for 128 bit entries
 	unsigned m_nMIDIGlobalExpression;
 

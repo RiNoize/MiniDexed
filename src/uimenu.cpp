@@ -606,6 +606,28 @@ void CUIMenu::EventHandler (TMenuEvent Event)
 		TGMenuSelectHandler ("Edit Voice");
 		break;
 
+	case MenuEventAltPotPrev:
+		m_pMiniDexed->SelectPreviousAltPotBank ();
+		if (IsPerformanceMenuActive ())
+		{
+			m_bPerformanceOverviewShowTGParameter = true;
+			m_nPerformanceOverviewTGParameter = m_pMiniDexed->GetAltPotTGParameter ();
+			m_bPerformanceOverviewEditActive = false;
+		}
+		DisplayAltPotBankOverlay ();
+		break;
+
+	case MenuEventAltPotNext:
+		m_pMiniDexed->SelectNextAltPotBank ();
+		if (IsPerformanceMenuActive ())
+		{
+			m_bPerformanceOverviewShowTGParameter = true;
+			m_nPerformanceOverviewTGParameter = m_pMiniDexed->GetAltPotTGParameter ();
+			m_bPerformanceOverviewEditActive = false;
+		}
+		DisplayAltPotBankOverlay ();
+		break;
+
 	default:
 		(*m_pParentMenu[m_nCurrentMenuItem].Handler) (this, Event);
 		break;
@@ -972,6 +994,63 @@ void CUIMenu::PerformanceOverviewTimerHandler (TKernelTimerHandle hTimer, void *
 	}
 }
 
+
+
+void CUIMenu::DisplayAltPotBankOverlay (void)
+{
+	m_bSysExDisplayActive = true;
+	m_nSysExDisplaySequence++;
+
+	CTimer::Get ()->StartKernelTimer (MSEC2HZ (2000), SysExDisplayTimerHandler,
+					 (void *)(uintptr_t) m_nSysExDisplaySequence, this);
+
+	m_pUI->DisplayWrite ("", "Alt Knobs", m_pMiniDexed->GetAltPotBankName (), false, false);
+}
+
+void CUIMenu::ShowAltPotController (unsigned nTG, const char *pParameterName, int nValue)
+{
+	if (nTG >= m_nToneGenerators || !pParameterName)
+	{
+		return;
+	}
+
+	if (IsPerformanceMenuActive ())
+	{
+		m_bPerformanceOverviewShowTGParameter = true;
+		m_nPerformanceOverviewTGParameter = m_pMiniDexed->GetAltPotTGParameter ();
+	}
+
+	std::string Title = "TG" + std::to_string (nTG + 1) + " ";
+	Title += pParameterName;
+	if (Title.length () > 16)
+	{
+		Title = Title.substr (0, 16);
+	}
+
+	std::string Value;
+	if (m_pMiniDexed->GetAltPotBank () == CMiniDexed::AltPotBankOctave)
+	{
+		int nOctave = nValue / 12;
+		if (nOctave > 0)
+		{
+			Value = "+";
+		}
+		Value += std::to_string (nOctave);
+		Value += " Oct";
+	}
+	else
+	{
+		Value = std::to_string (nValue);
+	}
+
+	m_bSysExDisplayActive = true;
+	m_nSysExDisplaySequence++;
+
+	CTimer::Get ()->StartKernelTimer (MSEC2HZ (2000), SysExDisplayTimerHandler,
+					 (void *)(uintptr_t) m_nSysExDisplaySequence, this);
+
+	m_pUI->DisplayWrite ("", Title.c_str (), Value.c_str (), false, false);
+}
 
 void CUIMenu::ShowVoiceDataElement (unsigned nTG, unsigned nVoiceDataElement, unsigned nValue)
 {

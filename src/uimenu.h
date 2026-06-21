@@ -79,6 +79,8 @@ public:
 		MenuEventTGModulation,
 		MenuEventTGChannel,
 		MenuEventTGEditVoice,
+		MenuEventAltPotPrev,
+		MenuEventAltPotNext,
 		MenuEventUnknown
 	};
 
@@ -92,6 +94,7 @@ public:
 	// Jump the UI to the existing voice-edit menu item that corresponds to
 	// a raw DX7 voice data element changed by incoming SysEx.
 	void ShowVoiceDataElement (unsigned nTG, unsigned nVoiceDataElement, unsigned nValue);
+	void ShowAltPotController (unsigned nTG, const char *pParameterName, int nValue);
 	
 private:
 	typedef void TMenuHandler (CUIMenu *pUIMenu, TMenuEvent Event);
@@ -165,6 +168,7 @@ private:
 
 	void ArmPerformanceOverviewTimer (unsigned nDelayMS, bool bShowOverviewNext);
 	void DisplayPerformanceTGOverview (void);
+	void DisplayAltPotBankOverlay (void);
 	bool HandlePerformanceOverviewShortcut (TMenuEvent Event);
 	bool HandlePerformanceOverviewTGSelect (TMenuEvent Event);
 	bool HandlePerformanceOverviewEditStep (TMenuEvent Event);

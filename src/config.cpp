@@ -136,6 +136,7 @@ void CConfig::Load (void)
 	m_nMIDISystemCCPan = m_Properties.GetNumber ("MIDISystemCCPan", 0);
 	m_nMIDISystemCCDetune = m_Properties.GetNumber ("MIDISystemCCDetune", 0);
 	m_nMIDISystemCCOctave = m_Properties.GetNumber ("MIDISystemCCOctave", 0);
+	m_nMIDISystemCCAltPot = m_Properties.GetNumber ("MIDISystemCCAltPot", 0);
 	m_nMIDIGlobalExpression = m_Properties.GetNumber ("MIDIGlobalExpression", 0);
 
 	m_bLCDEnabled = m_Properties.GetNumber ("LCDEnabled", 0) != 0;
@@ -241,6 +242,8 @@ void CConfig::Load (void)
 	m_nMIDIButtonTGModulation = m_Properties.GetNumber ("MIDIButtonTGModulation", 0);
 	m_nMIDIButtonTGChannel = m_Properties.GetNumber ("MIDIButtonTGChannel", 0);
 	m_nMIDIButtonTGEditVoice = m_Properties.GetNumber ("MIDIButtonTGEditVoice", 0);
+	m_nMIDIButtonAltPotPrev = m_Properties.GetNumber ("MIDIButtonAltPotPrev", 0);
+	m_nMIDIButtonAltPotNext = m_Properties.GetNumber ("MIDIButtonAltPotNext", 0);
 	
 	m_bEncoderEnabled = m_Properties.GetNumber ("EncoderEnabled", 0) != 0;
 	m_nEncoderPinClock = m_Properties.GetNumber ("EncoderPinClock", 10);
@@ -465,6 +468,11 @@ unsigned CConfig::GetMIDISystemCCDetune (void) const
 unsigned CConfig::GetMIDISystemCCOctave (void) const
 {
 	return m_nMIDISystemCCOctave;
+}
+
+unsigned CConfig::GetMIDISystemCCAltPot (void) const
+{
+	return m_nMIDISystemCCAltPot;
 }
 
 unsigned CConfig::GetMIDIGlobalExpression (void) const
@@ -930,6 +938,16 @@ unsigned CConfig::GetMIDIButtonTGChannel (void) const
 unsigned CConfig::GetMIDIButtonTGEditVoice (void) const
 {
 	return m_nMIDIButtonTGEditVoice;
+}
+
+unsigned CConfig::GetMIDIButtonAltPotPrev (void) const
+{
+	return m_nMIDIButtonAltPotPrev;
+}
+
+unsigned CConfig::GetMIDIButtonAltPotNext (void) const
+{
+	return m_nMIDIButtonAltPotNext;
 }
 
 bool CConfig::GetEncoderEnabled (void) const

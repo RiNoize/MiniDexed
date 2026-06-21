@@ -157,6 +157,15 @@ public:
 	bool IsValidPerformanceBank(unsigned nBankID);
 
 	// Must match the order in CUIMenu::TParameter
+	enum TAltPotBank
+	{
+		AltPotBankOctave,
+		AltPotBankCutoff,
+		AltPotBankResonance,
+		AltPotBankReverbSend,
+		AltPotBankUnknown
+	};
+
 	enum TParameter
 	{
 		ParameterCompressorEnable,
@@ -229,6 +238,13 @@ public:
 	void SetTGParameter (TTGParameter Parameter, int nValue, unsigned nTG);
 	int GetTGParameter (TTGParameter Parameter, unsigned nTG);
 
+	void SelectPreviousAltPotBank (void);
+	void SelectNextAltPotBank (void);
+	TAltPotBank GetAltPotBank (void) const;
+	const char *GetAltPotBankName (void) const;
+	TTGParameter GetAltPotTGParameter (void) const;
+	int SetAltPotValue (unsigned nValue, unsigned nTG);
+
 	// access (global or OP-related) parameter of the active voice of a TG
 	static const unsigned NoOP = 6;		// for global parameters
 	void SetVoiceParameter (uint8_t uchOffset, uint8_t uchValue, unsigned nOP, unsigned nTG);
@@ -269,6 +285,7 @@ private:
 	int m_nParameter[ParameterUnknown];			// global (non-TG) parameters
 	
 	unsigned m_nToneGenerators;
+	TAltPotBank m_AltPotBank;
 	unsigned m_nPolyphony;
 
 	CDexedAdapter *m_pTG[CConfig::AllToneGenerators];

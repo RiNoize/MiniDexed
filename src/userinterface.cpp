@@ -227,6 +227,11 @@ void CUserInterface::ShowVoiceDataElement (unsigned nTG, unsigned nVoiceDataElem
 	m_Menu.ShowVoiceDataElement (nTG, nVoiceDataElement, nValue);
 }
 
+void CUserInterface::ShowAltPotController (unsigned nTG, const char *pParameterName, int nValue)
+{
+	m_Menu.ShowAltPotController (nTG, pParameterName, nValue);
+}
+
 void CUserInterface::DisplayWrite (const char *pMenu, const char *pParam, const char *pValue,
 				   bool bArrowDown, bool bArrowUp)
 {
@@ -497,6 +502,14 @@ void CUserInterface::UIButtonsEventHandler (CUIButton::BtnEvent Event)
 
 	case CUIButton::BtnEventTGEditVoice:
 		m_Menu.EventHandler (CUIMenu::MenuEventTGEditVoice);
+		break;
+
+	case CUIButton::BtnEventAltPotPrev:
+		m_Menu.EventHandler (CUIMenu::MenuEventAltPotPrev);
+		break;
+
+	case CUIButton::BtnEventAltPotNext:
+		m_Menu.EventHandler (CUIMenu::MenuEventAltPotNext);
 		break;
 
 	default:

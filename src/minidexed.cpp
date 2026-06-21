@@ -80,6 +80,7 @@ CMiniDexed::CMiniDexed (CConfig *pConfig, CInterruptSystem *pInterrupt,
 	assert (m_pConfig);
 		
 	m_nToneGenerators = m_pConfig->GetToneGenerators();
+	m_AltPotBank = AltPotBankOctave;
 	m_nPolyphony = m_pConfig->GetPolyphony();
 	LOGNOTE("Tone Generators=%d, Polyphony=%d", m_nToneGenerators, m_nPolyphony);
 
@@ -1138,6 +1139,103 @@ void CMiniDexed::CopyTG (unsigned nFromTG, unsigned nToTG)
 	m_UI.ParameterChanged ();
 }
 
+
+
+void CMiniDexed::SelectPreviousAltPotBank (void)
+{
+	m_AltPotBank = (m_AltPotBank == AltPotBankOctave) ?
+		AltPotBankReverbSend : (TAltPotBank) ((unsigned) m_AltPotBank - 1);
+}
+
+void CMiniDexed::SelectNextAltPotBank (void)
+{
+	m_AltPotBank = (m_AltPotBank == AltPotBankReverbSend) ?
+		AltPotBankOctave : (TAltPotBank) ((unsigned) m_AltPotBank + 1);
+}
+
+CMiniDexed::TAltPotBank CMiniDexed::GetAltPotBank (void) const
+{
+	return m_AltPotBank;
+}
+
+const char *CMiniDexed::GetAltPotBankName (void) const
+{
+	switch (m_AltPotBank)
+	{
+	case AltPotBankOctave:		return "Octave";
+	case AltPotBankCutoff:		return "Cutoff";
+	case AltPotBankResonance:	return "Resonance";
+	case AltPotBankReverbSend:	return "Reverb Send";
+	default:			return "Unknown";
+	}
+}
+
+CMiniDexed::TTGParameter CMiniDexed::GetAltPotTGParameter (void) const
+{
+	switch (m_AltPotBank)
+	{
+	case AltPotBankOctave:		return TGParameterNoteShift;
+	case AltPotBankCutoff:		return TGParameterCutoff;
+	case AltPotBankResonance:	return TGParameterResonance;
+	case AltPotBankReverbSend:	return TGParameterReverbSend;
+	default:			return TGParameterNoteShift;
+	}
+}
+
+int CMiniDexed::SetAltPotValue (unsigned nValue, unsigned nTG)
+{
+	assert (nTG < CConfig::AllToneGenerators);
+	if (nTG >= m_nToneGenerators) return 0;
+
+	int nConvertedValue = 0;
+
+	switch (m_AltPotBank)
+	{
+	case AltPotBankOctave:
+		if (nValue < 26)
+		{
+			nConvertedValue = -24;
+		}
+		else if (nValue < 51)
+		{
+			nConvertedValue = -12;
+		}
+		else if (nValue < 77)
+		{
+			nConvertedValue = 0;
+		}
+		else if (nValue < 102)
+		{
+			nConvertedValue = 12;
+		}
+		else
+		{
+			nConvertedValue = 24;
+		}
+		SetTGParameter (TGParameterNoteShift, nConvertedValue, nTG);
+		break;
+
+	case AltPotBankCutoff:
+		nConvertedValue = (int) ((nValue * 99 + 63) / 127);
+		SetTGParameter (TGParameterCutoff, nConvertedValue, nTG);
+		break;
+
+	case AltPotBankResonance:
+		nConvertedValue = (int) ((nValue * 99 + 63) / 127);
+		SetTGParameter (TGParameterResonance, nConvertedValue, nTG);
+		break;
+
+	case AltPotBankReverbSend:
+		nConvertedValue = (int) ((nValue * 99 + 63) / 127);
+		SetTGParameter (TGParameterReverbSend, nConvertedValue, nTG);
+		break;
+
+	default:
+		break;
+	}
+
+	return nConvertedValue;
+}
 
 void CMiniDexed::SetTGParameter (TTGParameter Parameter, int nValue, unsigned nTG)
 {
