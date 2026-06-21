@@ -28,7 +28,7 @@
 #define BUTTONS_UPDATE_NUM_TICKS 100
 #define DEBOUNCE_TIME 20
 #define MAX_GPIO_BUTTONS 11  // 5 UI buttons, 6 Program/Bank/TG Select buttons
-#define MAX_MIDI_BUTTONS 36
+#define MAX_MIDI_BUTTONS 37
 #define MAX_BUTTONS (MAX_GPIO_BUTTONS+MAX_MIDI_BUTTONS)
 
 class CUIButtons;
@@ -75,15 +75,16 @@ public:
 		BtnEventTGPan = 26,
 		BtnEventTGReverbSend = 27,
 		BtnEventTGDetune = 28,
-		BtnEventTGCutoff = 29,
-		BtnEventTGResonance = 30,
-		BtnEventTGPitchBend = 31,
-		BtnEventTGPortamento = 32,
-		BtnEventTGPolyMono = 33,
-		BtnEventTGModulation = 34,
-		BtnEventTGChannel = 35,
-		BtnEventTGEditVoice = 36,
-		BtnEventUnknown = 37
+		BtnEventTGOctave = 29,
+		BtnEventTGCutoff = 30,
+		BtnEventTGResonance = 31,
+		BtnEventTGPitchBend = 32,
+		BtnEventTGPortamento = 33,
+		BtnEventTGPolyMono = 34,
+		BtnEventTGModulation = 35,
+		BtnEventTGChannel = 36,
+		BtnEventTGEditVoice = 37,
+		BtnEventUnknown = 38
 	};
 	
 	CUIButton (void);
@@ -219,6 +220,7 @@ private:
 	unsigned m_TGPanMidi;
 	unsigned m_TGReverbSendMidi;
 	unsigned m_TGDetuneMidi;
+	unsigned m_TGOctaveMidi;
 	unsigned m_TGCutoffMidi;
 	unsigned m_TGResonanceMidi;
 	unsigned m_TGPitchBendMidi;

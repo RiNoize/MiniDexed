@@ -1095,6 +1095,10 @@ void CMiniDexed::SetTGParameter (TTGParameter Parameter, int nValue, unsigned nT
 	case TGParameterVolume:		SetVolume (nValue, nTG);	break;
 	case TGParameterPan:		SetPan (nValue, nTG);		break;
 	case TGParameterMasterTune:	SetMasterTune (nValue, nTG);	break;
+	case TGParameterNoteShift:
+		m_nNoteShift[nTG] = constrain (nValue, -24, 24);
+		m_UI.ParameterChanged ();
+		break;
 	case TGParameterCutoff:		SetCutoff (nValue, nTG);	break;
 	case TGParameterResonance:	SetResonance (nValue, nTG);	break;
 	case TGParameterPitchBendRange:	setPitchbendRange (nValue, nTG);	break;
@@ -1151,6 +1155,7 @@ int CMiniDexed::GetTGParameter (TTGParameter Parameter, unsigned nTG)
 	case TGParameterVolume:		return m_nVolume[nTG];
 	case TGParameterPan:		return m_nPan[nTG];
 	case TGParameterMasterTune:	return m_nMasterTune[nTG];
+	case TGParameterNoteShift:	return m_nNoteShift[nTG];
 	case TGParameterCutoff:		return m_nCutoff[nTG];
 	case TGParameterResonance:	return m_nResonance[nTG];
 	case TGParameterMIDIChannel:	return m_nMIDIChannel[nTG];

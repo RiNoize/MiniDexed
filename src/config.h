@@ -136,6 +136,7 @@ public:
 	unsigned GetMIDISystemCCVol (void) const;
 	unsigned GetMIDISystemCCPan (void) const;
 	unsigned GetMIDISystemCCDetune (void) const;
+	unsigned GetMIDISystemCCOctave (void) const;
 	unsigned GetMIDIGlobalExpression (void) const;
 
 	// HD44780 LCD
@@ -246,6 +247,7 @@ public:
 	unsigned GetMIDIButtonTGPan (void) const;
 	unsigned GetMIDIButtonTGReverbSend (void) const;
 	unsigned GetMIDIButtonTGDetune (void) const;
+	unsigned GetMIDIButtonTGOctave (void) const;
 	unsigned GetMIDIButtonTGCutoff (void) const;
 	unsigned GetMIDIButtonTGResonance (void) const;
 	unsigned GetMIDIButtonTGPitchBend (void) const;
@@ -320,6 +322,7 @@ private:
 	unsigned m_nMIDISystemCCVol;
 	unsigned m_nMIDISystemCCPan;
 	unsigned m_nMIDISystemCCDetune;
+	unsigned m_nMIDISystemCCOctave;
 	unsigned m_nMIDIGlobalExpression;
 
 	bool m_bLCDEnabled;
@@ -413,6 +416,7 @@ private:
 	unsigned m_nMIDIButtonTGPan;
 	unsigned m_nMIDIButtonTGReverbSend;
 	unsigned m_nMIDIButtonTGDetune;
+	unsigned m_nMIDIButtonTGOctave;
 	unsigned m_nMIDIButtonTGCutoff;
 	unsigned m_nMIDIButtonTGResonance;
 	unsigned m_nMIDIButtonTGPitchBend;

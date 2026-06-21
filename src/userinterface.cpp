@@ -463,6 +463,10 @@ void CUserInterface::UIButtonsEventHandler (CUIButton::BtnEvent Event)
 		m_Menu.EventHandler (CUIMenu::MenuEventTGDetune);
 		break;
 
+	case CUIButton::BtnEventTGOctave:
+		m_Menu.EventHandler (CUIMenu::MenuEventTGOctave);
+		break;
+
 	case CUIButton::BtnEventTGCutoff:
 		m_Menu.EventHandler (CUIMenu::MenuEventTGCutoff);
 		break;

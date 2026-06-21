@@ -327,6 +327,7 @@ boolean CUIButtons::Initialize (void)
 	m_TGPanMidi = ccToMidiPin( m_pConfig->GetMIDIButtonTGPan ());
 	m_TGReverbSendMidi = ccToMidiPin( m_pConfig->GetMIDIButtonTGReverbSend ());
 	m_TGDetuneMidi = ccToMidiPin( m_pConfig->GetMIDIButtonTGDetune ());
+	m_TGOctaveMidi = ccToMidiPin( m_pConfig->GetMIDIButtonTGOctave ());
 	m_TGCutoffMidi = ccToMidiPin( m_pConfig->GetMIDIButtonTGCutoff ());
 	m_TGResonanceMidi = ccToMidiPin( m_pConfig->GetMIDIButtonTGResonance ());
 	m_TGPitchBendMidi = ccToMidiPin( m_pConfig->GetMIDIButtonTGPitchBend ());
@@ -360,7 +361,7 @@ boolean CUIButtons::Initialize (void)
 		m_prevMidi, m_nextMidi, m_backMidi, m_selectMidi, m_homeMidi, m_pgmUpMidi, m_pgmDownMidi, m_BankUpMidi, m_BankDownMidi, m_TGUpMidi, m_TGDownMidi,
 		m_TG1Midi, m_TG2Midi, m_TG3Midi, m_TG4Midi, m_TG5Midi, m_TG6Midi, m_TG7Midi, m_TG8Midi,
 		m_EffectsMidi, m_MasterVolumeMidi, m_PerformanceMidi,
-		m_TGVoiceMidi, m_TGBankMidi, m_TGVolumeMidi, m_TGPanMidi, m_TGReverbSendMidi, m_TGDetuneMidi,
+		m_TGVoiceMidi, m_TGBankMidi, m_TGVolumeMidi, m_TGPanMidi, m_TGReverbSendMidi, m_TGDetuneMidi, m_TGOctaveMidi,
 		m_TGCutoffMidi, m_TGResonanceMidi, m_TGPitchBendMidi, m_TGPortamentoMidi, m_TGPolyMonoMidi,
 		m_TGModulationMidi, m_TGChannelMidi, m_TGEditVoiceMidi
 	};
@@ -377,7 +378,8 @@ boolean CUIButtons::Initialize (void)
 		CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick,
 		CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick,
 		CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick,
-		CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick
+		CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick,
+		CUIButton::BtnTriggerClick
 	};
 	CUIButton::BtnEvent events[MAX_BUTTONS] = {
 		// Normal buttons
@@ -421,6 +423,7 @@ boolean CUIButtons::Initialize (void)
 		CUIButton::BtnEventTGPan,
 		CUIButton::BtnEventTGReverbSend,
 		CUIButton::BtnEventTGDetune,
+		CUIButton::BtnEventTGOctave,
 		CUIButton::BtnEventTGCutoff,
 		CUIButton::BtnEventTGResonance,
 		CUIButton::BtnEventTGPitchBend,

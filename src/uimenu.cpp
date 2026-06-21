@@ -82,6 +82,7 @@ const CUIMenu::TMenuItem CUIMenu::s_TGMenu[] =
 	{"Reverb-Send",	EditTGParameter,	0,	CMiniDexed::TGParameterReverbSend},
 #endif
 	{"Detune",	EditTGParameter,	0,	CMiniDexed::TGParameterMasterTune},
+	{"Octave",	EditTGParameter,	0,	CMiniDexed::TGParameterNoteShift},
 	{"Cutoff",	EditTGParameter,	0,	CMiniDexed::TGParameterCutoff},
 	{"Resonance",	EditTGParameter,	0,	CMiniDexed::TGParameterResonance},
 	{"Pitch Bend",	MenuHandler,		s_EditPitchBendMenu},
@@ -243,6 +244,7 @@ const CUIMenu::TParameter CUIMenu::s_TGParameter[CMiniDexed::TGParameterUnknown]
 	{0,	127,					8, ToVolume},		// TGParameterVolume
 	{0,	127,					8, ToPan},		// TGParameterPan
 	{-99,	99,					1},			// TGParameterMasterTune
+	{-24,	24,					12, ToOctave},		// TGParameterNoteShift
 	{0,	99,					1},			// TGParameterCutoff
 	{0,	99,					1},			// TGParameterResonance
 	{0,	CMIDIDevice::ChannelUnknown-1,		1, ToMIDIChannel}, 	// TGParameterMIDIChannel
@@ -567,6 +569,10 @@ void CUIMenu::EventHandler (TMenuEvent Event)
 		TGMenuSelectHandler ("Detune");
 		break;
 
+	case MenuEventTGOctave:
+		TGMenuSelectHandler ("Octave");
+		break;
+
 	case MenuEventTGCutoff:
 		TGMenuSelectHandler ("Cutoff");
 		break;
@@ -673,6 +679,11 @@ bool CUIMenu::HandlePerformanceOverviewShortcut (TMenuEvent Event)
 	case MenuEventTGDetune:
 		m_bPerformanceOverviewShowTGParameter = true;
 		m_nPerformanceOverviewTGParameter = CMiniDexed::TGParameterMasterTune;
+		return true;
+
+	case MenuEventTGOctave:
+		m_bPerformanceOverviewShowTGParameter = true;
+		m_nPerformanceOverviewTGParameter = CMiniDexed::TGParameterNoteShift;
 		return true;
 
 	case MenuEventTGCutoff:
@@ -831,6 +842,20 @@ std::string CUIMenu::FormatOverviewTGParameterValue (unsigned nTGParameter, int 
 		return std::string (Buffer);
 	}
 
+	case CMiniDexed::TGParameterNoteShift:
+	{
+		int nOct = nValue / 12;
+		if (nOct > 0)
+		{
+			snprintf (Buffer, sizeof Buffer, "+%d", nOct);
+		}
+		else
+		{
+			snprintf (Buffer, sizeof Buffer, "%2d", nOct);
+		}
+		return std::string (Buffer);
+	}
+
 	case CMiniDexed::TGParameterMIDIChannel:
 		if (nValue == CMIDIDevice::Disabled)
 		{
@@ -898,17 +923,6 @@ void CUIMenu::DisplayPerformanceTGOverview (void)
 
 void CUIMenu::ArmPerformanceOverviewTimer (unsigned nDelayMS, bool bShowOverviewNext)
 {
-	// When Performance page 2 is being used as a live parameter monitor
-	// (Volume, Pan, Detune, Cutoff, etc.), keep it on screen and refresh it
-	// periodically. This avoids touching the MIDI input path: the display simply
-	// re-reads the current MiniDexed values, including values changed by external
-	// MIDI CC controllers such as MIDISystemCCVol/Pan/Detune.
-	if (m_bPerformanceOverviewShowTGParameter && nDelayMS >= 4000 && !bShowOverviewNext)
-	{
-		nDelayMS = 300;
-		bShowOverviewNext = true;
-	}
-
 	m_nPerformanceOverviewSequence++;
 	m_bPerformanceOverviewPage = bShowOverviewNext;
 
@@ -1751,6 +1765,20 @@ string CUIMenu::ToPan (int nValue)
 	PanMarker[nIndex] = '\xFF';			// 0xFF is the block character
 
 	return PanMarker;
+}
+
+string CUIMenu::ToOctave (int nValue)
+{
+	int nOct = nValue / 12;
+	if (nOct > 0)
+	{
+		return "+" + to_string (nOct) + " oct";
+	}
+	if (nOct < 0)
+	{
+		return to_string (nOct) + " oct";
+	}
+	return "0";
 }
 
 string CUIMenu::ToMIDIChannel (int nValue)

@@ -190,6 +190,7 @@ public:
 		TGParameterVolume,
 		TGParameterPan,
 		TGParameterMasterTune,
+		TGParameterNoteShift,
 		TGParameterCutoff,
 		TGParameterResonance,
 		TGParameterMIDIChannel,

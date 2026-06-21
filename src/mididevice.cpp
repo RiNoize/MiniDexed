@@ -68,6 +68,7 @@ CMIDIDevice::CMIDIDevice (CMiniDexed *pSynthesizer, CConfig *pConfig, CUserInter
 	m_nMIDISystemCCVol = m_pConfig->GetMIDISystemCCVol();
 	m_nMIDISystemCCPan = m_pConfig->GetMIDISystemCCPan();
 	m_nMIDISystemCCDetune = m_pConfig->GetMIDISystemCCDetune();
+	m_nMIDISystemCCOctave = m_pConfig->GetMIDISystemCCOctave();
 
 	m_MIDISystemCCBitmap[0] = 0;
 	m_MIDISystemCCBitmap[1] = 0;
@@ -95,6 +96,10 @@ CMIDIDevice::CMIDIDevice (CMiniDexed *pSynthesizer, CConfig *pConfig, CUserInter
 		}
 		if (m_nMIDISystemCCDetune != 0) {
 			u8 cc = MIDISystemCCMap[m_nMIDISystemCCDetune][tg];
+			m_MIDISystemCCBitmap[cc>>5] |= (1<<(cc%32));
+		}
+		if (m_nMIDISystemCCOctave != 0) {
+			u8 cc = MIDISystemCCMap[m_nMIDISystemCCOctave][tg];
 			m_MIDISystemCCBitmap[cc>>5] |= (1<<(cc%32));
 		}
 	}
@@ -755,6 +760,24 @@ bool CMIDIDevice::HandleMIDISystemCC(const u8 ucCC, const u8 ucCCval)
 					// Scale to -99 to +99 cents
 					m_pSynthesizer->SetMasterTune (maplong (ucCCval, 1, 127, -99, 99), tg);
 				}
+				return true;
+			}
+		}
+		if (m_nMIDISystemCCOctave != 0) {
+			if (ucCC == MIDISystemCCMap[m_nMIDISystemCCOctave][tg]) {
+				int nShift = 0;
+				if (ucCCval < 26) {
+					nShift = -24;
+				} else if (ucCCval < 51) {
+					nShift = -12;
+				} else if (ucCCval < 77) {
+					nShift = 0;
+				} else if (ucCCval < 102) {
+					nShift = 12;
+				} else {
+					nShift = 24;
+				}
+				m_pSynthesizer->SetTGParameter (CMiniDexed::TGParameterNoteShift, nShift, tg);
 				return true;
 			}
 		}

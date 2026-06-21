@@ -135,6 +135,7 @@ void CConfig::Load (void)
 	m_nMIDISystemCCVol = m_Properties.GetNumber ("MIDISystemCCVol", 0);
 	m_nMIDISystemCCPan = m_Properties.GetNumber ("MIDISystemCCPan", 0);
 	m_nMIDISystemCCDetune = m_Properties.GetNumber ("MIDISystemCCDetune", 0);
+	m_nMIDISystemCCOctave = m_Properties.GetNumber ("MIDISystemCCOctave", 0);
 	m_nMIDIGlobalExpression = m_Properties.GetNumber ("MIDIGlobalExpression", 0);
 
 	m_bLCDEnabled = m_Properties.GetNumber ("LCDEnabled", 0) != 0;
@@ -231,6 +232,7 @@ void CConfig::Load (void)
 	m_nMIDIButtonTGPan = m_Properties.GetNumber ("MIDIButtonTGPan", 0);
 	m_nMIDIButtonTGReverbSend = m_Properties.GetNumber ("MIDIButtonTGReverbSend", 0);
 	m_nMIDIButtonTGDetune = m_Properties.GetNumber ("MIDIButtonTGDetune", 0);
+	m_nMIDIButtonTGOctave = m_Properties.GetNumber ("MIDIButtonTGOctave", 0);
 	m_nMIDIButtonTGCutoff = m_Properties.GetNumber ("MIDIButtonTGCutoff", 0);
 	m_nMIDIButtonTGResonance = m_Properties.GetNumber ("MIDIButtonTGResonance", 0);
 	m_nMIDIButtonTGPitchBend = m_Properties.GetNumber ("MIDIButtonTGPitchBend", 0);
@@ -457,6 +459,12 @@ unsigned CConfig::GetMIDISystemCCPan (void) const
 unsigned CConfig::GetMIDISystemCCDetune (void) const
 {
 	return m_nMIDISystemCCDetune;
+}
+
+
+unsigned CConfig::GetMIDISystemCCOctave (void) const
+{
+	return m_nMIDISystemCCOctave;
 }
 
 unsigned CConfig::GetMIDIGlobalExpression (void) const
@@ -876,6 +884,12 @@ unsigned CConfig::GetMIDIButtonTGReverbSend (void) const
 unsigned CConfig::GetMIDIButtonTGDetune (void) const
 {
 	return m_nMIDIButtonTGDetune;
+}
+
+
+unsigned CConfig::GetMIDIButtonTGOctave (void) const
+{
+	return m_nMIDIButtonTGOctave;
 }
 
 unsigned CConfig::GetMIDIButtonTGCutoff (void) const
