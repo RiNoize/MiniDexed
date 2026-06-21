@@ -345,6 +345,7 @@ const CUIMenu::TMenuItem CUIMenu::s_PerformanceMenu[] =
 	{"Load",	PerformanceMenu, 0, 0}, 
 	{"Save",	MenuHandler,	s_SaveMenu},
 	{"Delete",	PerformanceMenu, 0, 1},
+	{"Copy TG",	CopyTG, 0, 0},
 	{"Bank",	EditPerformanceBankNumber, 0, 0},
 	{"PCCH",	EditGlobalParameter,	0,	CMiniDexed::ParameterPerformanceSelectChannel},
 	{0}
@@ -2613,6 +2614,100 @@ void CUIMenu::PerformanceMenu (CUIMenu *pUIMenu, TMenuEvent Event)
 		pUIMenu->m_pUI->DisplayWrite ("", "Delete?", pUIMenu->m_bConfirmDeletePerformance ? "Yes" : "No", false, false);
 	}
 }
+
+
+void CUIMenu::CopyTG (CUIMenu *pUIMenu, TMenuEvent Event)
+{
+	if (pUIMenu->m_nToneGenerators < 2)
+	{
+		pUIMenu->m_pUI->DisplayWrite ("Copy TG", "", "Need 2 TGs", false, false);
+		return;
+	}
+
+	unsigned nMaxTG = pUIMenu->m_nToneGenerators - 1;
+
+	if (pUIMenu->m_nCopyTGFrom > nMaxTG)
+	{
+		pUIMenu->m_nCopyTGFrom = 0;
+	}
+	if (pUIMenu->m_nCopyTGTo > nMaxTG)
+	{
+		pUIMenu->m_nCopyTGTo = (nMaxTG > 0) ? 1 : 0;
+	}
+	if (pUIMenu->m_nCopyTGTo == pUIMenu->m_nCopyTGFrom)
+	{
+		pUIMenu->m_nCopyTGTo = (pUIMenu->m_nCopyTGFrom + 1) % pUIMenu->m_nToneGenerators;
+	}
+
+	unsigned *pCurrentTG = pUIMenu->m_bCopyTGSelectingTo ?
+		&pUIMenu->m_nCopyTGTo : &pUIMenu->m_nCopyTGFrom;
+
+	switch (Event)
+	{
+	case MenuEventUpdate:
+	case MenuEventUpdateParameter:
+		break;
+
+	case MenuEventStepDown:
+		if (*pCurrentTG == 0)
+		{
+			*pCurrentTG = nMaxTG;
+		}
+		else
+		{
+			(*pCurrentTG)--;
+		}
+		if (pUIMenu->m_bCopyTGSelectingTo && pUIMenu->m_nCopyTGTo == pUIMenu->m_nCopyTGFrom)
+		{
+			*pCurrentTG = (*pCurrentTG == 0) ? nMaxTG : *pCurrentTG - 1;
+		}
+		break;
+
+	case MenuEventStepUp:
+		*pCurrentTG = (*pCurrentTG + 1) % pUIMenu->m_nToneGenerators;
+		if (pUIMenu->m_bCopyTGSelectingTo && pUIMenu->m_nCopyTGTo == pUIMenu->m_nCopyTGFrom)
+		{
+			*pCurrentTG = (*pCurrentTG + 1) % pUIMenu->m_nToneGenerators;
+		}
+		break;
+
+	case MenuEventSelect:
+		if (!pUIMenu->m_bCopyTGSelectingTo)
+		{
+			pUIMenu->m_bCopyTGSelectingTo = true;
+			if (pUIMenu->m_nCopyTGTo == pUIMenu->m_nCopyTGFrom)
+			{
+				pUIMenu->m_nCopyTGTo = (pUIMenu->m_nCopyTGFrom + 1) % pUIMenu->m_nToneGenerators;
+			}
+		}
+		else
+		{
+			unsigned nFromTG = pUIMenu->m_nCopyTGFrom;
+			unsigned nToTG = pUIMenu->m_nCopyTGTo;
+
+			pUIMenu->m_pMiniDexed->CopyTG (nFromTG, nToTG);
+			pUIMenu->m_bCopyTGSelectingTo = false;
+
+			std::string Msg = "TG" + std::to_string (nFromTG + 1) +
+					  " -> TG" + std::to_string (nToTG + 1);
+
+			pUIMenu->m_pUI->DisplayWrite ("Copy TG", Msg.c_str (), "Copied", false, false);
+			CTimer::Get ()->StartKernelTimer (MSEC2HZ (1200), TimerHandler, 0, pUIMenu);
+			return;
+		}
+		break;
+
+	default:
+		return;
+	}
+
+	std::string Value = "TG" + std::to_string (*pCurrentTG + 1);
+	pUIMenu->m_pUI->DisplayWrite ("Copy TG",
+				      pUIMenu->m_bCopyTGSelectingTo ? "To" : "From",
+				      Value.c_str (),
+				      true, true);
+}
+
 
 void CUIMenu::EditPerformanceBankNumber (CUIMenu *pUIMenu, TMenuEvent Event)
 {

@@ -126,6 +126,7 @@ private:
 	static void EditTGParameter2 (CUIMenu *pUIMenu, TMenuEvent Event);
 	static void EditTGParameterModulation (CUIMenu *pUIMenu, TMenuEvent Event); 	
 	static void PerformanceMenu (CUIMenu *pUIMenu, TMenuEvent Event);
+	static void CopyTG (CUIMenu *pUIMenu, TMenuEvent Event);
 	static void SavePerformanceNewFile (CUIMenu *pUIMenu, TMenuEvent Event);
 	static void EditPerformanceBankNumber (CUIMenu *pUIMenu, TMenuEvent Event);
 	static void EditMasterVolume (CUIMenu *pUIMenu, TMenuEvent Event);
@@ -238,6 +239,9 @@ private:
 	unsigned m_nPerformanceOverviewTGParameter=0;
 	bool m_bPerformanceOverviewEditActive=false;
 	unsigned m_nPerformanceOverviewEditTG=0;
+	unsigned m_nCopyTGFrom=0;
+	unsigned m_nCopyTGTo=1;
+	bool m_bCopyTGSelectingTo=false;
 
 };
 

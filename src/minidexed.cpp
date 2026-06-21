@@ -1081,6 +1081,64 @@ int CMiniDexed::GetParameter (TParameter Parameter)
 	return m_nParameter[Parameter];
 }
 
+
+void CMiniDexed::CopyTG (unsigned nFromTG, unsigned nToTG)
+{
+	if (nFromTG >= m_nToneGenerators || nToTG >= m_nToneGenerators)
+	{
+		return;
+	}
+
+	if (nFromTG == nToTG)
+	{
+		return;
+	}
+
+	uint8_t VoiceDump[163];
+	getSysExVoiceDump (VoiceDump, nFromTG);
+
+	// Copy selection/reference state first.  The raw voice dump is loaded at
+	// the end so an edited voice is copied exactly, instead of merely loading
+	// the same bank/program from disk.
+	m_nVoiceBankID[nToTG] = m_nVoiceBankID[nFromTG];
+	m_nVoiceBankIDMSB[nToTG] = m_nVoiceBankIDMSB[nFromTG];
+	m_nProgram[nToTG] = m_nProgram[nFromTG];
+
+	SetMIDIChannel ((uint8_t) m_nMIDIChannel[nFromTG], nToTG);
+	SetVolume (m_nVolume[nFromTG], nToTG);
+	SetPan (m_nPan[nFromTG], nToTG);
+	SetMasterTune (m_nMasterTune[nFromTG], nToTG);
+	SetCutoff (m_nCutoff[nFromTG], nToTG);
+	SetResonance (m_nResonance[nFromTG], nToTG);
+	SetReverbSend (m_nReverbSend[nFromTG], nToTG);
+
+	m_nNoteLimitLow[nToTG] = m_nNoteLimitLow[nFromTG];
+	m_nNoteLimitHigh[nToTG] = m_nNoteLimitHigh[nFromTG];
+	m_nNoteShift[nToTG] = m_nNoteShift[nFromTG];
+
+	setPitchbendRange (m_nPitchBendRange[nFromTG], nToTG);
+	setPitchbendStep (m_nPitchBendStep[nFromTG], nToTG);
+	setPortamentoMode (m_nPortamentoMode[nFromTG], nToTG);
+	setPortamentoGlissando (m_nPortamentoGlissando[nFromTG], nToTG);
+	setPortamentoTime (m_nPortamentoTime[nFromTG], nToTG);
+	setMonoMode (m_bMonoMode[nFromTG] ? 1 : 0, nToTG);
+
+	setModWheelRange (m_nModulationWheelRange[nFromTG], nToTG);
+	setModWheelTarget (m_nModulationWheelTarget[nFromTG], nToTG);
+	setFootControllerRange (m_nFootControlRange[nFromTG], nToTG);
+	setFootControllerTarget (m_nFootControlTarget[nFromTG], nToTG);
+	setBreathControllerRange (m_nBreathControlRange[nFromTG], nToTG);
+	setBreathControllerTarget (m_nBreathControlTarget[nFromTG], nToTG);
+	setAftertouchRange (m_nAftertouchRange[nFromTG], nToTG);
+	setAftertouchTarget (m_nAftertouchTarget[nFromTG], nToTG);
+
+	// Copy the current voice data last, including unsaved voice edits.
+	loadVoiceParameters (VoiceDump, nToTG);
+
+	m_UI.ParameterChanged ();
+}
+
+
 void CMiniDexed::SetTGParameter (TTGParameter Parameter, int nValue, unsigned nTG)
 {
 	assert (nTG < CConfig::AllToneGenerators);

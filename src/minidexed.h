@@ -150,6 +150,7 @@ public:
 	bool DoSetNewPerformanceBank (void);
 	bool GetPerformanceSelectToLoad(void);
 	bool SavePerformance (bool bSaveAsDeault);
+	void CopyTG (unsigned nFromTG, unsigned nToTG);
 	unsigned GetPerformanceSelectChannel (void);
 	void SetPerformanceSelectChannel (unsigned uCh);
 	bool IsValidPerformance(unsigned nID);
