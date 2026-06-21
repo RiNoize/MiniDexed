@@ -336,6 +336,7 @@ boolean CUIButtons::Initialize (void)
 	m_TGModulationMidi = ccToMidiPin( m_pConfig->GetMIDIButtonTGModulation ());
 	m_TGChannelMidi = ccToMidiPin( m_pConfig->GetMIDIButtonTGChannel ());
 	m_TGEditVoiceMidi = ccToMidiPin( m_pConfig->GetMIDIButtonTGEditVoice ());
+	m_AltPotMidi = ccToMidiPin( m_pConfig->GetMIDIButtonAltPot ());
 	m_AltPotPrevMidi = ccToMidiPin( m_pConfig->GetMIDIButtonAltPotPrev ());
 	m_AltPotNextMidi = ccToMidiPin( m_pConfig->GetMIDIButtonAltPotNext ());
 	
@@ -366,7 +367,7 @@ boolean CUIButtons::Initialize (void)
 		m_TGVoiceMidi, m_TGBankMidi, m_TGVolumeMidi, m_TGPanMidi, m_TGReverbSendMidi, m_TGDetuneMidi, m_TGOctaveMidi,
 		m_TGCutoffMidi, m_TGResonanceMidi, m_TGPitchBendMidi, m_TGPortamentoMidi, m_TGPolyMonoMidi,
 		m_TGModulationMidi, m_TGChannelMidi, m_TGEditVoiceMidi,
-		m_AltPotPrevMidi, m_AltPotNextMidi
+		m_AltPotMidi, m_AltPotPrevMidi, m_AltPotNextMidi
 	};
 	CUIButton::BtnTrigger triggers[MAX_BUTTONS] = {
 		// Normal buttons
@@ -382,7 +383,7 @@ boolean CUIButtons::Initialize (void)
 		CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick,
 		CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick,
 		CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick,
-		CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick
+		CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick
 	};
 	CUIButton::BtnEvent events[MAX_BUTTONS] = {
 		// Normal buttons
@@ -435,6 +436,7 @@ boolean CUIButtons::Initialize (void)
 		CUIButton::BtnEventTGModulation,
 		CUIButton::BtnEventTGChannel,
 		CUIButton::BtnEventTGEditVoice,
+		CUIButton::BtnEventAltPot,
 		CUIButton::BtnEventAltPotPrev,
 		CUIButton::BtnEventAltPotNext
 	};

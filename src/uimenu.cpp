@@ -415,8 +415,15 @@ void CUIMenu::EventHandler (TMenuEvent Event)
 		{
 			if (HandlePerformanceOverviewShortcut (Event))
 			{
-				DisplayPerformanceTGOverview ();
-				ArmPerformanceOverviewTimer (4000, false);
+				if (Event == MenuEventAltPot)
+				{
+					DisplayAltPotBankOverlay ();
+				}
+				else
+				{
+					const char *pName = GetMIDIButtonFunctionName (Event);
+					DisplayMIDIButtonOverlay ("MIDI Button", pName ? pName : "Parameter", 1000);
+				}
 				return;
 			}
 
@@ -425,8 +432,8 @@ void CUIMenu::EventHandler (TMenuEvent Event)
 			// edited by the encoder. They do not leave the Performance overview.
 			if (HandlePerformanceOverviewTGSelect (Event))
 			{
-				DisplayPerformanceTGOverview ();
-				ArmPerformanceOverviewTimer (4000, false);
+				const char *pTGName = GetMIDIButtonTGName (Event);
+				DisplayMIDIButtonOverlay ("TG Select", pTGName ? pTGName : "TG", 1000);
 				return;
 			}
 
@@ -504,106 +511,142 @@ void CUIMenu::EventHandler (TMenuEvent Event)
 
 	case MenuEventTG1:
 		TGSelectHandler (0);
+		DisplayMIDIButtonOverlay ("TG Select", "TG1", 1000);
 		break;
 
 	case MenuEventTG2:
 		TGSelectHandler (1);
+		DisplayMIDIButtonOverlay ("TG Select", "TG2", 1000);
 		break;
 
 	case MenuEventTG3:
 		TGSelectHandler (2);
+		DisplayMIDIButtonOverlay ("TG Select", "TG3", 1000);
 		break;
 
 	case MenuEventTG4:
 		TGSelectHandler (3);
+		DisplayMIDIButtonOverlay ("TG Select", "TG4", 1000);
 		break;
 
 	case MenuEventTG5:
 		TGSelectHandler (4);
+		DisplayMIDIButtonOverlay ("TG Select", "TG5", 1000);
 		break;
 
 	case MenuEventTG6:
 		TGSelectHandler (5);
+		DisplayMIDIButtonOverlay ("TG Select", "TG6", 1000);
 		break;
 
 	case MenuEventTG7:
 		TGSelectHandler (6);
+		DisplayMIDIButtonOverlay ("TG Select", "TG7", 1000);
 		break;
 
 	case MenuEventTG8:
 		TGSelectHandler (7);
+		DisplayMIDIButtonOverlay ("TG Select", "TG8", 1000);
 		break;
 
 	case MenuEventEffects:
 		MainMenuSelectHandler ("Effects");
+		DisplayMIDIButtonOverlay ("Menu", "Effects", 1000);
 		break;
 
 	case MenuEventMasterVolume:
 		MainMenuSelectHandler ("Master Volume");
+		DisplayMIDIButtonOverlay ("Menu", "Master Volume", 1000);
 		break;
 
 	case MenuEventPerformance:
 		MainMenuSelectHandler ("Performance");
+		DisplayMIDIButtonOverlay ("Menu", "Performance", 1000);
 		break;
 
 	case MenuEventTGVoice:
 		TGMenuSelectHandler ("Voice");
+		DisplayMIDIButtonOverlay ("TG Function", "Voice", 1000);
 		break;
 
 	case MenuEventTGBank:
 		TGMenuSelectHandler ("Bank");
+		DisplayMIDIButtonOverlay ("TG Function", "Bank", 1000);
 		break;
 
 	case MenuEventTGVolume:
 		TGMenuSelectHandler ("Volume");
+		DisplayMIDIButtonOverlay ("TG Function", "Volume", 1000);
 		break;
 
 	case MenuEventTGPan:
 		TGMenuSelectHandler ("Pan");
+		DisplayMIDIButtonOverlay ("TG Function", "Pan", 1000);
 		break;
 
 	case MenuEventTGReverbSend:
 		TGMenuSelectHandler ("Reverb-Send");
+		DisplayMIDIButtonOverlay ("TG Function", "Reverb-Send", 1000);
 		break;
 
 	case MenuEventTGDetune:
 		TGMenuSelectHandler ("Detune");
+		DisplayMIDIButtonOverlay ("TG Function", "Detune", 1000);
 		break;
 
 	case MenuEventTGOctave:
 		TGMenuSelectHandler ("Octave");
+		DisplayMIDIButtonOverlay ("TG Function", "Octave", 1000);
 		break;
 
 	case MenuEventTGCutoff:
 		TGMenuSelectHandler ("Cutoff");
+		DisplayMIDIButtonOverlay ("TG Function", "Cutoff", 1000);
 		break;
 
 	case MenuEventTGResonance:
 		TGMenuSelectHandler ("Resonance");
+		DisplayMIDIButtonOverlay ("TG Function", "Resonance", 1000);
 		break;
 
 	case MenuEventTGPitchBend:
 		TGMenuSelectHandler ("Pitch Bend");
+		DisplayMIDIButtonOverlay ("TG Function", "Pitch Bend", 1000);
 		break;
 
 	case MenuEventTGPortamento:
 		TGMenuSelectHandler ("Portamento");
+		DisplayMIDIButtonOverlay ("TG Function", "Portamento", 1000);
 		break;
 
 	case MenuEventTGPolyMono:
 		TGMenuSelectHandler ("Poly/Mono");
+		DisplayMIDIButtonOverlay ("TG Function", "Poly/Mono", 1000);
 		break;
 
 	case MenuEventTGModulation:
 		TGMenuSelectHandler ("Modulation");
+		DisplayMIDIButtonOverlay ("TG Function", "Modulation", 1000);
 		break;
 
 	case MenuEventTGChannel:
 		TGMenuSelectHandler ("Channel");
+		DisplayMIDIButtonOverlay ("TG Function", "Channel", 1000);
 		break;
 
 	case MenuEventTGEditVoice:
 		TGMenuSelectHandler ("Edit Voice");
+		DisplayMIDIButtonOverlay ("TG Function", "Edit Voice", 1000);
+		break;
+
+	case MenuEventAltPot:
+		if (IsPerformanceMenuActive ())
+		{
+			m_bPerformanceOverviewShowTGParameter = true;
+			m_nPerformanceOverviewTGParameter = m_pMiniDexed->GetAltPotTGParameter ();
+			m_bPerformanceOverviewEditActive = false;
+		}
+		DisplayAltPotBankOverlay ();
 		break;
 
 	case MenuEventAltPotPrev:
@@ -675,6 +718,47 @@ std::string CUIMenu::Short3 (const std::string &Text)
 	return Result;
 }
 
+
+const char *CUIMenu::GetMIDIButtonFunctionName (TMenuEvent Event)
+{
+	switch (Event)
+	{
+	case MenuEventTGVoice:		return "Voice";
+	case MenuEventTGBank:		return "Bank";
+	case MenuEventTGVolume:		return "Volume";
+	case MenuEventTGPan:		return "Pan";
+	case MenuEventTGReverbSend:	return "Reverb-Send";
+	case MenuEventTGDetune:		return "Detune";
+	case MenuEventTGOctave:		return "Octave";
+	case MenuEventTGCutoff:		return "Cutoff";
+	case MenuEventTGResonance:	return "Resonance";
+	case MenuEventTGPitchBend:	return "Pitch Bend";
+	case MenuEventTGPortamento:	return "Portamento";
+	case MenuEventTGPolyMono:	return "Poly/Mono";
+	case MenuEventTGModulation:	return "Modulation";
+	case MenuEventTGChannel:	return "Channel";
+	case MenuEventTGEditVoice:	return "Edit Voice";
+	case MenuEventAltPot:		return "Alt Knobs";
+	default:			return 0;
+	}
+}
+
+const char *CUIMenu::GetMIDIButtonTGName (TMenuEvent Event)
+{
+	switch (Event)
+	{
+	case MenuEventTG1:	return "TG1";
+	case MenuEventTG2:	return "TG2";
+	case MenuEventTG3:	return "TG3";
+	case MenuEventTG4:	return "TG4";
+	case MenuEventTG5:	return "TG5";
+	case MenuEventTG6:	return "TG6";
+	case MenuEventTG7:	return "TG7";
+	case MenuEventTG8:	return "TG8";
+	default:		return 0;
+	}
+}
+
 bool CUIMenu::HandlePerformanceOverviewShortcut (TMenuEvent Event)
 {
 	switch (Event)
@@ -707,6 +791,12 @@ bool CUIMenu::HandlePerformanceOverviewShortcut (TMenuEvent Event)
 	case MenuEventTGOctave:
 		m_bPerformanceOverviewShowTGParameter = true;
 		m_nPerformanceOverviewTGParameter = CMiniDexed::TGParameterNoteShift;
+		return true;
+
+	case MenuEventAltPot:
+		m_bPerformanceOverviewShowTGParameter = true;
+		m_nPerformanceOverviewTGParameter = m_pMiniDexed->GetAltPotTGParameter ();
+		m_bPerformanceOverviewEditActive = false;
 		return true;
 
 	case MenuEventTGCutoff:
@@ -953,7 +1043,7 @@ void CUIMenu::ArmPerformanceOverviewTimer (unsigned nDelayMS, bool bShowOverview
 	// external MIDI CC controllers such as MIDISystemCCVol/Pan/Detune/Octave.
 	if (m_bPerformanceOverviewShowTGParameter && nDelayMS >= 4000 && !bShowOverviewNext)
 	{
-		nDelayMS = 300;
+		nDelayMS = 150;
 		bShowOverviewNext = true;
 	}
 
@@ -998,13 +1088,19 @@ void CUIMenu::PerformanceOverviewTimerHandler (TKernelTimerHandle hTimer, void *
 
 void CUIMenu::DisplayAltPotBankOverlay (void)
 {
+	DisplayMIDIButtonOverlay ("Alt Knobs", m_pMiniDexed->GetAltPotBankName (), 1000);
+}
+
+void CUIMenu::DisplayMIDIButtonOverlay (const char *pLine1, const char *pLine2, unsigned nDelayMS)
+{
 	m_bSysExDisplayActive = true;
 	m_nSysExDisplaySequence++;
 
-	CTimer::Get ()->StartKernelTimer (MSEC2HZ (2000), SysExDisplayTimerHandler,
+	CTimer::Get ()->StartKernelTimer (MSEC2HZ (nDelayMS), SysExDisplayTimerHandler,
 					 (void *)(uintptr_t) m_nSysExDisplaySequence, this);
 
-	m_pUI->DisplayWrite ("", "Alt Knobs", m_pMiniDexed->GetAltPotBankName (), false, false);
+	m_pUI->DisplayWrite ("", pLine1 ? pLine1 : "MIDI Button",
+				      pLine2 ? pLine2 : "", false, false);
 }
 
 void CUIMenu::ShowAltPotController (unsigned nTG, const char *pParameterName, int nValue)
@@ -2480,7 +2576,15 @@ void CUIMenu::SysExDisplayTimerHandler (TKernelTimerHandle hTimer, void *pParam,
 	}
 
 	pThis->m_bSysExDisplayActive = false;
-	pThis->EventHandler (MenuEventUpdate);
+	if (pThis->IsPerformanceMenuActive () && pThis->m_bPerformanceOverviewShowTGParameter)
+	{
+		pThis->DisplayPerformanceTGOverview ();
+		pThis->ArmPerformanceOverviewTimer (4000, false);
+	}
+	else
+	{
+		pThis->EventHandler (MenuEventUpdate);
+	}
 }
 
 void CUIMenu::PerformanceMenu (CUIMenu *pUIMenu, TMenuEvent Event)

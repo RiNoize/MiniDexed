@@ -242,6 +242,7 @@ void CConfig::Load (void)
 	m_nMIDIButtonTGModulation = m_Properties.GetNumber ("MIDIButtonTGModulation", 0);
 	m_nMIDIButtonTGChannel = m_Properties.GetNumber ("MIDIButtonTGChannel", 0);
 	m_nMIDIButtonTGEditVoice = m_Properties.GetNumber ("MIDIButtonTGEditVoice", 0);
+	m_nMIDIButtonAltPot = m_Properties.GetNumber ("MIDIButtonAltPot", 0);
 	m_nMIDIButtonAltPotPrev = m_Properties.GetNumber ("MIDIButtonAltPotPrev", 0);
 	m_nMIDIButtonAltPotNext = m_Properties.GetNumber ("MIDIButtonAltPotNext", 0);
 	
@@ -938,6 +939,11 @@ unsigned CConfig::GetMIDIButtonTGChannel (void) const
 unsigned CConfig::GetMIDIButtonTGEditVoice (void) const
 {
 	return m_nMIDIButtonTGEditVoice;
+}
+
+unsigned CConfig::GetMIDIButtonAltPot (void) const
+{
+	return m_nMIDIButtonAltPot;
 }
 
 unsigned CConfig::GetMIDIButtonAltPotPrev (void) const

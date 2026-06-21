@@ -79,6 +79,7 @@ public:
 		MenuEventTGModulation,
 		MenuEventTGChannel,
 		MenuEventTGEditVoice,
+		MenuEventAltPot,
 		MenuEventAltPotPrev,
 		MenuEventAltPotNext,
 		MenuEventUnknown
@@ -169,6 +170,9 @@ private:
 	void ArmPerformanceOverviewTimer (unsigned nDelayMS, bool bShowOverviewNext);
 	void DisplayPerformanceTGOverview (void);
 	void DisplayAltPotBankOverlay (void);
+	void DisplayMIDIButtonOverlay (const char *pLine1, const char *pLine2, unsigned nDelayMS);
+	static const char *GetMIDIButtonFunctionName (TMenuEvent Event);
+	static const char *GetMIDIButtonTGName (TMenuEvent Event);
 	bool HandlePerformanceOverviewShortcut (TMenuEvent Event);
 	bool HandlePerformanceOverviewTGSelect (TMenuEvent Event);
 	bool HandlePerformanceOverviewEditStep (TMenuEvent Event);

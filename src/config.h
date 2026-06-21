@@ -257,6 +257,7 @@ public:
 	unsigned GetMIDIButtonTGModulation (void) const;
 	unsigned GetMIDIButtonTGChannel (void) const;
 	unsigned GetMIDIButtonTGEditVoice (void) const;
+	unsigned GetMIDIButtonAltPot (void) const;
 	unsigned GetMIDIButtonAltPotPrev (void) const;
 	unsigned GetMIDIButtonAltPotNext (void) const;
 	
@@ -429,6 +430,7 @@ private:
 	unsigned m_nMIDIButtonTGModulation;
 	unsigned m_nMIDIButtonTGChannel;
 	unsigned m_nMIDIButtonTGEditVoice;
+	unsigned m_nMIDIButtonAltPot;
 	unsigned m_nMIDIButtonAltPotPrev;
 	unsigned m_nMIDIButtonAltPotNext;
 
