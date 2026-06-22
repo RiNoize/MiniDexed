@@ -163,6 +163,12 @@ public:
 		AltPotBankCutoff,
 		AltPotBankResonance,
 		AltPotBankReverbSend,
+		AltPotBankFeedback,
+		AltPotBankLFOSpeed,
+		AltPotBankLFOPMD,
+		AltPotBankLFOAMD,
+		AltPotBankFMPluck,
+		AltPotBankPortamentoTime,
 		AltPotBankUnknown
 	};
 
