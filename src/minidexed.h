@@ -160,15 +160,7 @@ public:
 	enum TAltPotBank
 	{
 		AltPotBankOctave,
-		AltPotBankCutoff,
-		AltPotBankResonance,
-		AltPotBankReverbSend,
-		AltPotBankFeedback,
-		AltPotBankLFOSpeed,
-		AltPotBankLFOPMD,
-		AltPotBankLFOAMD,
-		AltPotBankFMPluck,
-		AltPotBankPortamentoTime,
+		AltPotBankNoteShift,
 		AltPotBankUnknown
 	};
 

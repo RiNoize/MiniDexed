@@ -978,14 +978,28 @@ std::string CUIMenu::FormatOverviewTGParameterValue (unsigned nTGParameter, int 
 
 	case CMiniDexed::TGParameterNoteShift:
 	{
-		int nOct = nValue / 12;
-		if (nOct > 0)
+		if (m_pMiniDexed->GetAltPotBank () == CMiniDexed::AltPotBankNoteShift)
 		{
-			snprintf (Buffer, sizeof Buffer, "+%d", nOct);
+			if (nValue > 0)
+			{
+				snprintf (Buffer, sizeof Buffer, "+%2d", nValue);
+			}
+			else
+			{
+				snprintf (Buffer, sizeof Buffer, "%3d", nValue);
+			}
 		}
 		else
 		{
-			snprintf (Buffer, sizeof Buffer, "%2d", nOct);
+			int nOct = nValue / 12;
+			if (nOct > 0)
+			{
+				snprintf (Buffer, sizeof Buffer, "+%d", nOct);
+			}
+			else
+			{
+				snprintf (Buffer, sizeof Buffer, "%2d", nOct);
+			}
 		}
 		return std::string (Buffer);
 	}
@@ -1162,6 +1176,15 @@ void CUIMenu::ShowAltPotController (unsigned nTG, const char *pParameterName, in
 		}
 		Value += std::to_string (nOctave);
 		Value += " Oct";
+	}
+	else if (m_pMiniDexed->GetAltPotBank () == CMiniDexed::AltPotBankNoteShift)
+	{
+		if (nValue > 0)
+		{
+			Value = "+";
+		}
+		Value += std::to_string (nValue);
+		Value += " st";
 	}
 	else
 	{

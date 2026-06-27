@@ -1144,13 +1144,13 @@ void CMiniDexed::CopyTG (unsigned nFromTG, unsigned nToTG)
 void CMiniDexed::SelectPreviousAltPotBank (void)
 {
 	m_AltPotBank = (m_AltPotBank == AltPotBankOctave) ?
-		AltPotBankPortamentoTime : (TAltPotBank) ((unsigned) m_AltPotBank - 1);
+		AltPotBankNoteShift : AltPotBankOctave;
 }
 
 void CMiniDexed::SelectNextAltPotBank (void)
 {
-	m_AltPotBank = (m_AltPotBank == AltPotBankPortamentoTime) ?
-		AltPotBankOctave : (TAltPotBank) ((unsigned) m_AltPotBank + 1);
+	m_AltPotBank = (m_AltPotBank == AltPotBankOctave) ?
+		AltPotBankNoteShift : AltPotBankOctave;
 }
 
 CMiniDexed::TAltPotBank CMiniDexed::GetAltPotBank (void) const
@@ -1163,30 +1163,14 @@ const char *CMiniDexed::GetAltPotBankName (void) const
 	switch (m_AltPotBank)
 	{
 	case AltPotBankOctave:		return "Octave";
-	case AltPotBankCutoff:		return "Cutoff";
-	case AltPotBankResonance:	return "Resonance";
-	case AltPotBankReverbSend:	return "Reverb Send";
-	case AltPotBankFeedback:	return "Feedback";
-	case AltPotBankLFOSpeed:	return "LFO Speed";
-	case AltPotBankLFOPMD:		return "LFO PMD";
-	case AltPotBankLFOAMD:		return "LFO AMD";
-	case AltPotBankFMPluck:	return "FM Pluck";
-	case AltPotBankPortamentoTime:return "Portamento";
+	case AltPotBankNoteShift:	return "Note Shift";
 	default:			return "Unknown";
 	}
 }
 
 CMiniDexed::TTGParameter CMiniDexed::GetAltPotTGParameter (void) const
 {
-	switch (m_AltPotBank)
-	{
-	case AltPotBankOctave:		return TGParameterNoteShift;
-	case AltPotBankCutoff:		return TGParameterCutoff;
-	case AltPotBankResonance:	return TGParameterResonance;
-	case AltPotBankReverbSend:	return TGParameterReverbSend;
-	case AltPotBankPortamentoTime:return TGParameterPortamentoTime;
-	default:			return TGParameterUnknown;
-	}
+	return TGParameterNoteShift;
 }
 
 int CMiniDexed::SetAltPotValue (unsigned nValue, unsigned nTG)
@@ -1199,6 +1183,9 @@ int CMiniDexed::SetAltPotValue (unsigned nValue, unsigned nTG)
 	switch (m_AltPotBank)
 	{
 	case AltPotBankOctave:
+		// Quantized octave jumps.  This is the safe default bank and stores the
+		// real Performance NoteShift value, so the display can always read the
+		// actual TG state instead of a cached/default controller value.
 		if (nValue < 26)
 		{
 			nConvertedValue = -24;
@@ -1222,73 +1209,12 @@ int CMiniDexed::SetAltPotValue (unsigned nValue, unsigned nTG)
 		SetTGParameter (TGParameterNoteShift, nConvertedValue, nTG);
 		break;
 
-	case AltPotBankCutoff:
-		nConvertedValue = (int) ((nValue * 99 + 63) / 127);
-		SetTGParameter (TGParameterCutoff, nConvertedValue, nTG);
-		break;
-
-	case AltPotBankResonance:
-		nConvertedValue = (int) ((nValue * 99 + 63) / 127);
-		SetTGParameter (TGParameterResonance, nConvertedValue, nTG);
-		break;
-
-	case AltPotBankReverbSend:
-		nConvertedValue = (int) ((nValue * 99 + 63) / 127);
-		SetTGParameter (TGParameterReverbSend, nConvertedValue, nTG);
-		break;
-
-	case AltPotBankFeedback:
-		nConvertedValue = (int) ((nValue * 7 + 63) / 127);
-		SetVoiceParameter (DEXED_FEEDBACK, (uint8_t) nConvertedValue, NoOP, nTG);
-		break;
-
-	case AltPotBankLFOSpeed:
-		nConvertedValue = (int) ((nValue * 99 + 63) / 127);
-		SetVoiceParameter (DEXED_LFO_SPEED, (uint8_t) nConvertedValue, NoOP, nTG);
-		break;
-
-	case AltPotBankLFOPMD:
-		nConvertedValue = (int) ((nValue * 99 + 63) / 127);
-		SetVoiceParameter (DEXED_LFO_PITCH_MOD_DEP, (uint8_t) nConvertedValue, NoOP, nTG);
-		break;
-
-	case AltPotBankLFOAMD:
-		nConvertedValue = (int) ((nValue * 99 + 63) / 127);
-		SetVoiceParameter (DEXED_LFO_AMP_MOD_DEP, (uint8_t) nConvertedValue, NoOP, nTG);
-		break;
-
-	case AltPotBankFMPluck:
-	{
-		// Experimental FM pluck macro.  It keeps the edit local to the current
-		// voice data stored in this TG/performance.  The even-numbered UI
-		// operators (OP2, OP4, OP6) are treated as likely modulators in common
-		// 2-op-pair FM pluck structures.  Higher values make the harmonic
-		// envelope faster and less sustained, so the attack stays bright but the
-		// body becomes shorter and more percussive.
-		nConvertedValue = (int) ((nValue * 99 + 63) / 127);
-		unsigned nRate2 = 35 + (unsigned) ((nConvertedValue * 64 + 49) / 99); // 35..99
-		unsigned nRate3 = 30 + (unsigned) ((nConvertedValue * 69 + 49) / 99); // 30..99
-		unsigned nLevel2 = 99 - (unsigned) ((nConvertedValue * 45 + 49) / 99); // 99..54
-		unsigned nLevel3 = 75 - (unsigned) ((nConvertedValue * 65 + 49) / 99); // 75..10
-
-		if (nLevel3 < 10)
-		{
-			nLevel3 = 10;
-		}
-
-		for (unsigned nOP = 1; nOP < 6; nOP += 2) // UI OP2, OP4, OP6
-		{
-			SetVoiceParameter (DEXED_OP_EG_R2, (uint8_t) nRate2, nOP, nTG);
-			SetVoiceParameter (DEXED_OP_EG_R3, (uint8_t) nRate3, nOP, nTG);
-			SetVoiceParameter (DEXED_OP_EG_L2, (uint8_t) nLevel2, nOP, nTG);
-			SetVoiceParameter (DEXED_OP_EG_L3, (uint8_t) nLevel3, nOP, nTG);
-		}
-		break;
-	}
-
-	case AltPotBankPortamentoTime:
-		nConvertedValue = (int) ((nValue * 99 + 63) / 127);
-		SetTGParameter (TGParameterPortamentoTime, nConvertedValue, nTG);
+	case AltPotBankNoteShift:
+		// Fine transpose / NoteShift in semitones: -24 .. +24.
+		// This uses the same real Performance parameter as Octave, but with
+		// semitone resolution instead of 12-semitone steps.
+		nConvertedValue = (int) ((nValue * 48 + 63) / 127) - 24;
+		SetTGParameter (TGParameterNoteShift, nConvertedValue, nTG);
 		break;
 
 	default:
