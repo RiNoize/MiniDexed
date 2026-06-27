@@ -167,7 +167,7 @@ private:
 	void TGMenuSelectHandler (const char *pName);
 	void MainMenuSelectHandler (const char *pName);
 
-	void ArmPerformanceOverviewTimer (unsigned nDelayMS, bool bShowOverviewNext);
+	void ArmPerformanceOverviewTimer (unsigned nDelayMS, bool bShowOverviewNext, bool bResetParameterHold = true);
 	void DisplayPerformanceTGOverview (void);
 	void DisplayAltPotBankOverlay (void);
 	void DisplayMIDIButtonOverlay (const char *pLine1, const char *pLine2, unsigned nDelayMS);
@@ -248,6 +248,7 @@ private:
 	bool m_bPerformanceOverviewNoteShiftFine=false;
 	bool m_bPerformanceOverviewEditActive=false;
 	unsigned m_nPerformanceOverviewEditTG=0;
+	unsigned m_nPerformanceOverviewHoldRemainingMS=0;
 	unsigned m_nCopyTGFrom=0;
 	unsigned m_nCopyTGTo=1;
 	bool m_bCopyTGSelectingTo=false;

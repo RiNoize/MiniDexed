@@ -1101,17 +1101,26 @@ void CUIMenu::DisplayPerformanceTGOverview (void)
 	m_pUI->DisplayWrite ("", Line1.c_str (), Line2.c_str (), false, false);
 }
 
-void CUIMenu::ArmPerformanceOverviewTimer (unsigned nDelayMS, bool bShowOverviewNext)
+void CUIMenu::ArmPerformanceOverviewTimer (unsigned nDelayMS, bool bShowOverviewNext, bool bResetParameterHold)
 {
-	// When Performance page 2 is being used as a live parameter monitor
-	// (Volume, Pan, Detune, Octave, Cutoff, etc.), keep it on screen and refresh
-	// it periodically. This avoids touching the MIDI input path: the display
-	// simply re-reads the current MiniDexed values, including values changed by
-	// external MIDI CC controllers such as MIDISystemCCVol/Pan/Detune/Octave.
+	// When Performance page 2 is showing a TG parameter (Volume, Pan,
+	// Octave/NoteShift, etc.), keep it visible and refresh it quickly, but only
+	// for a bounded hold time.  Any new edit/moving controller resets the hold
+	// to 4 seconds.  When the hold expires the normal Performance page 1 / page 2
+	// sequence resumes.
 	if (m_bPerformanceOverviewShowTGParameter && nDelayMS >= 4000 && !bShowOverviewNext)
 	{
+		if (bResetParameterHold || m_nPerformanceOverviewHoldRemainingMS == 0)
+		{
+			m_nPerformanceOverviewHoldRemainingMS = nDelayMS;
+		}
+
 		nDelayMS = 150;
 		bShowOverviewNext = true;
+	}
+	else if (bResetParameterHold)
+	{
+		m_nPerformanceOverviewHoldRemainingMS = 0;
 	}
 
 	m_nPerformanceOverviewSequence++;
@@ -1140,7 +1149,28 @@ void CUIMenu::PerformanceOverviewTimerHandler (TKernelTimerHandle hTimer, void *
 	if (pThis->m_bPerformanceOverviewPage)
 	{
 		pThis->DisplayPerformanceTGOverview ();
-		pThis->ArmPerformanceOverviewTimer (4000, false);
+
+		if (pThis->m_bPerformanceOverviewShowTGParameter
+			&& pThis->m_nPerformanceOverviewHoldRemainingMS > 0)
+		{
+			if (pThis->m_nPerformanceOverviewHoldRemainingMS > 150)
+			{
+				pThis->m_nPerformanceOverviewHoldRemainingMS -= 150;
+				pThis->ArmPerformanceOverviewTimer (150, true, false);
+			}
+			else
+			{
+				pThis->m_nPerformanceOverviewHoldRemainingMS = 0;
+				pThis->m_bPerformanceOverviewSuppressArm = true;
+				pThis->EventHandler (MenuEventUpdate);
+				pThis->m_bPerformanceOverviewSuppressArm = false;
+				pThis->ArmPerformanceOverviewTimer (2000, true);
+			}
+		}
+		else
+		{
+			pThis->ArmPerformanceOverviewTimer (4000, false);
+		}
 	}
 	else
 	{
