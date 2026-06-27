@@ -402,6 +402,22 @@ void CUIMenu::EventHandler (TMenuEvent Event)
 		m_bSysExDisplayActive = false;
 	}
 
+	if (Event == MenuEventUpdateParameter)
+	{
+		// External MIDI controllers (faders/knobs) arrive as parameter updates,
+		// not as local encoder step events.  When the Performance page 2
+		// parameter overview is active, keep it visible and restart the same
+		// 4-second idle hold used by encoder edits, so fast MIDI controller
+		// movements do not fall back to page 1 while the user is still editing.
+		if (IsPerformanceMenuActive ()
+			&& (m_bPerformanceOverviewShowTGParameter || m_bPerformanceOverviewAltPotGlobalLabels))
+		{
+			DisplayPerformanceTGOverview ();
+			ArmPerformanceOverviewTimer (4000, false, true);
+			return;
+		}
+	}
+
 	if (Event != MenuEventUpdate && Event != MenuEventUpdateParameter)
 	{
 		// Any real user action cancels pending automatic performance-page flips.
