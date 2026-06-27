@@ -245,6 +245,7 @@ private:
 	bool m_bPerformanceOverviewSuppressArm=false;
 	bool m_bPerformanceOverviewShowTGParameter=false;
 	unsigned m_nPerformanceOverviewTGParameter=0;
+	bool m_bPerformanceOverviewNoteShiftFine=false;
 	bool m_bPerformanceOverviewEditActive=false;
 	unsigned m_nPerformanceOverviewEditTG=0;
 	unsigned m_nCopyTGFrom=0;

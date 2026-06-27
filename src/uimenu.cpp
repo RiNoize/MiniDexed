@@ -632,11 +632,14 @@ void CUIMenu::EventHandler (TMenuEvent Event)
 			{
 				m_bPerformanceOverviewShowTGParameter = true;
 				m_nPerformanceOverviewTGParameter = Param;
+				m_bPerformanceOverviewNoteShiftFine =
+					m_pMiniDexed->GetAltPotBank () == CMiniDexed::AltPotBankNoteShift;
 				m_bPerformanceOverviewEditActive = false;
 			}
 			else
 			{
 				m_bPerformanceOverviewShowTGParameter = false;
+				m_bPerformanceOverviewNoteShiftFine = false;
 				m_bPerformanceOverviewEditActive = false;
 			}
 		}
@@ -652,11 +655,14 @@ void CUIMenu::EventHandler (TMenuEvent Event)
 			{
 				m_bPerformanceOverviewShowTGParameter = true;
 				m_nPerformanceOverviewTGParameter = Param;
+				m_bPerformanceOverviewNoteShiftFine =
+					m_pMiniDexed->GetAltPotBank () == CMiniDexed::AltPotBankNoteShift;
 				m_bPerformanceOverviewEditActive = false;
 			}
 			else
 			{
 				m_bPerformanceOverviewShowTGParameter = false;
+				m_bPerformanceOverviewNoteShiftFine = false;
 				m_bPerformanceOverviewEditActive = false;
 			}
 		}
@@ -672,11 +678,14 @@ void CUIMenu::EventHandler (TMenuEvent Event)
 			{
 				m_bPerformanceOverviewShowTGParameter = true;
 				m_nPerformanceOverviewTGParameter = Param;
+				m_bPerformanceOverviewNoteShiftFine =
+					m_pMiniDexed->GetAltPotBank () == CMiniDexed::AltPotBankNoteShift;
 				m_bPerformanceOverviewEditActive = false;
 			}
 			else
 			{
 				m_bPerformanceOverviewShowTGParameter = false;
+				m_bPerformanceOverviewNoteShiftFine = false;
 				m_bPerformanceOverviewEditActive = false;
 			}
 		}
@@ -777,32 +786,38 @@ bool CUIMenu::HandlePerformanceOverviewShortcut (TMenuEvent Event)
 	{
 	case MenuEventTGVoice:
 		m_bPerformanceOverviewShowTGParameter = false;
+		m_bPerformanceOverviewNoteShiftFine = false;
 		m_bPerformanceOverviewEditActive = false;
 		return true;
 
 	case MenuEventTGVolume:
 		m_bPerformanceOverviewShowTGParameter = true;
 		m_nPerformanceOverviewTGParameter = CMiniDexed::TGParameterVolume;
+		m_bPerformanceOverviewNoteShiftFine = false;
 		return true;
 
 	case MenuEventTGPan:
 		m_bPerformanceOverviewShowTGParameter = true;
 		m_nPerformanceOverviewTGParameter = CMiniDexed::TGParameterPan;
+		m_bPerformanceOverviewNoteShiftFine = false;
 		return true;
 
 	case MenuEventTGReverbSend:
 		m_bPerformanceOverviewShowTGParameter = true;
 		m_nPerformanceOverviewTGParameter = CMiniDexed::TGParameterReverbSend;
+		m_bPerformanceOverviewNoteShiftFine = false;
 		return true;
 
 	case MenuEventTGDetune:
 		m_bPerformanceOverviewShowTGParameter = true;
 		m_nPerformanceOverviewTGParameter = CMiniDexed::TGParameterMasterTune;
+		m_bPerformanceOverviewNoteShiftFine = false;
 		return true;
 
 	case MenuEventTGOctave:
 		m_bPerformanceOverviewShowTGParameter = true;
 		m_nPerformanceOverviewTGParameter = CMiniDexed::TGParameterNoteShift;
+		m_bPerformanceOverviewNoteShiftFine = false;
 		return true;
 
 	case MenuEventAltPot:
@@ -816,6 +831,8 @@ bool CUIMenu::HandlePerformanceOverviewShortcut (TMenuEvent Event)
 		}
 		m_bPerformanceOverviewShowTGParameter = true;
 		m_nPerformanceOverviewTGParameter = Param;
+		m_bPerformanceOverviewNoteShiftFine =
+			m_pMiniDexed->GetAltPotBank () == CMiniDexed::AltPotBankNoteShift;
 		m_bPerformanceOverviewEditActive = false;
 		return true;
 	}
@@ -823,31 +840,37 @@ bool CUIMenu::HandlePerformanceOverviewShortcut (TMenuEvent Event)
 	case MenuEventTGCutoff:
 		m_bPerformanceOverviewShowTGParameter = true;
 		m_nPerformanceOverviewTGParameter = CMiniDexed::TGParameterCutoff;
+		m_bPerformanceOverviewNoteShiftFine = false;
 		return true;
 
 	case MenuEventTGResonance:
 		m_bPerformanceOverviewShowTGParameter = true;
 		m_nPerformanceOverviewTGParameter = CMiniDexed::TGParameterResonance;
+		m_bPerformanceOverviewNoteShiftFine = false;
 		return true;
 
 	case MenuEventTGPitchBend:
 		m_bPerformanceOverviewShowTGParameter = true;
 		m_nPerformanceOverviewTGParameter = CMiniDexed::TGParameterPitchBendRange;
+		m_bPerformanceOverviewNoteShiftFine = false;
 		return true;
 
 	case MenuEventTGPortamento:
 		m_bPerformanceOverviewShowTGParameter = true;
 		m_nPerformanceOverviewTGParameter = CMiniDexed::TGParameterPortamentoTime;
+		m_bPerformanceOverviewNoteShiftFine = false;
 		return true;
 
 	case MenuEventTGPolyMono:
 		m_bPerformanceOverviewShowTGParameter = true;
 		m_nPerformanceOverviewTGParameter = CMiniDexed::TGParameterMonoMode;
+		m_bPerformanceOverviewNoteShiftFine = false;
 		return true;
 
 	case MenuEventTGChannel:
 		m_bPerformanceOverviewShowTGParameter = true;
 		m_nPerformanceOverviewTGParameter = CMiniDexed::TGParameterMIDIChannel;
+		m_bPerformanceOverviewNoteShiftFine = false;
 		return true;
 
 	default:
@@ -917,11 +940,20 @@ bool CUIMenu::HandlePerformanceOverviewEditStep (TMenuEvent Event)
 	CMiniDexed::TTGParameter Param =
 		(CMiniDexed::TTGParameter) m_nPerformanceOverviewTGParameter;
 	const TParameter &rParam = s_TGParameter[Param];
+	int nIncrement = rParam.Increment;
+
+	// TG Octave and AltPot Note Shift use the same internal Performance
+	// parameter (TGParameterNoteShift).  Normal TG Octave intentionally steps
+	// by 12 semitones, but AltPot Note Shift must edit by 1 semitone.
+	if (Param == CMiniDexed::TGParameterNoteShift && m_bPerformanceOverviewNoteShiftFine)
+	{
+		nIncrement = 1;
+	}
 
 	int nValue = m_pMiniDexed->GetTGParameter (Param, nTG);
 	if (Event == MenuEventStepDown)
 	{
-		nValue -= rParam.Increment;
+		nValue -= nIncrement;
 		if (nValue < rParam.Minimum)
 		{
 			nValue = rParam.Minimum;
@@ -929,7 +961,7 @@ bool CUIMenu::HandlePerformanceOverviewEditStep (TMenuEvent Event)
 	}
 	else
 	{
-		nValue += rParam.Increment;
+		nValue += nIncrement;
 		if (nValue > rParam.Maximum)
 		{
 			nValue = rParam.Maximum;
@@ -978,7 +1010,7 @@ std::string CUIMenu::FormatOverviewTGParameterValue (unsigned nTGParameter, int 
 
 	case CMiniDexed::TGParameterNoteShift:
 	{
-		if (m_pMiniDexed->GetAltPotBank () == CMiniDexed::AltPotBankNoteShift)
+		if (m_bPerformanceOverviewNoteShiftFine)
 		{
 			if (nValue > 0)
 			{
@@ -1140,11 +1172,17 @@ void CUIMenu::DisplayMIDIButtonOverlay (const char *pLine1, const char *pLine2, 
 
 void CUIMenu::ShowAltPotController (unsigned nTG, const char *pParameterName, int nValue)
 {
-	if (nTG >= m_nToneGenerators || !pParameterName)
+	(void) pParameterName;
+	(void) nValue;
+
+	if (nTG >= m_nToneGenerators)
 	{
 		return;
 	}
 
+	// Do not show a third/temporary AltPot page while a controller is moving.
+	// Page 2 is the live monitor; keep it armed and let the fast refresh show
+	// the real Performance NoteShift value.
 	if (IsPerformanceMenuActive ())
 	{
 		CMiniDexed::TTGParameter Param = m_pMiniDexed->GetAltPotTGParameter ();
@@ -1152,52 +1190,12 @@ void CUIMenu::ShowAltPotController (unsigned nTG, const char *pParameterName, in
 		{
 			m_bPerformanceOverviewShowTGParameter = true;
 			m_nPerformanceOverviewTGParameter = Param;
+			m_bPerformanceOverviewNoteShiftFine =
+				m_pMiniDexed->GetAltPotBank () == CMiniDexed::AltPotBankNoteShift;
+			DisplayPerformanceTGOverview ();
+			ArmPerformanceOverviewTimer (4000, false);
 		}
-		else
-		{
-			m_bPerformanceOverviewShowTGParameter = false;
-		}
 	}
-
-	std::string Title = "TG" + std::to_string (nTG + 1) + " ";
-	Title += pParameterName;
-	if (Title.length () > 16)
-	{
-		Title = Title.substr (0, 16);
-	}
-
-	std::string Value;
-	if (m_pMiniDexed->GetAltPotBank () == CMiniDexed::AltPotBankOctave)
-	{
-		int nOctave = nValue / 12;
-		if (nOctave > 0)
-		{
-			Value = "+";
-		}
-		Value += std::to_string (nOctave);
-		Value += " Oct";
-	}
-	else if (m_pMiniDexed->GetAltPotBank () == CMiniDexed::AltPotBankNoteShift)
-	{
-		if (nValue > 0)
-		{
-			Value = "+";
-		}
-		Value += std::to_string (nValue);
-		Value += " st";
-	}
-	else
-	{
-		Value = std::to_string (nValue);
-	}
-
-	m_bSysExDisplayActive = true;
-	m_nSysExDisplaySequence++;
-
-	CTimer::Get ()->StartKernelTimer (MSEC2HZ (2000), SysExDisplayTimerHandler,
-					 (void *)(uintptr_t) m_nSysExDisplaySequence, this);
-
-	m_pUI->DisplayWrite ("", Title.c_str (), Value.c_str (), false, false);
 }
 
 void CUIMenu::ShowVoiceDataElement (unsigned nTG, unsigned nVoiceDataElement, unsigned nValue)

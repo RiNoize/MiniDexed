@@ -771,11 +771,7 @@ bool CMIDIDevice::HandleMIDISystemCC(const u8 ucCC, const u8 ucCCval)
 		}
 		if (m_nMIDISystemCCAltPot != 0) {
 			if (ucCC == MIDISystemCCMap[m_nMIDISystemCCAltPot][tg]) {
-				int nDisplayValue = m_pSynthesizer->SetAltPotValue (ucCCval, tg);
-				if (m_pUI)
-				{
-					m_pUI->ShowAltPotController (tg, m_pSynthesizer->GetAltPotBankName(), nDisplayValue);
-				}
+				m_pSynthesizer->SetAltPotValue (ucCCval, tg);
 				return true;
 			}
 		}
