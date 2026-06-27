@@ -415,15 +415,8 @@ void CUIMenu::EventHandler (TMenuEvent Event)
 		{
 			if (HandlePerformanceOverviewShortcut (Event))
 			{
-				if (Event == MenuEventAltPot)
-				{
-					DisplayAltPotBankOverlay ();
-				}
-				else
-				{
-					const char *pName = GetMIDIButtonFunctionName (Event);
-					DisplayMIDIButtonOverlay ("MIDI Button", pName ? pName : "Parameter", 1000);
-				}
+				const char *pName = GetMIDIButtonFunctionName (Event);
+				DisplayMIDIButtonOverlay ("MIDI Button", pName ? pName : "Parameter", 1000);
 				return;
 			}
 
@@ -432,8 +425,8 @@ void CUIMenu::EventHandler (TMenuEvent Event)
 			// edited by the encoder. They do not leave the Performance overview.
 			if (HandlePerformanceOverviewTGSelect (Event))
 			{
-				const char *pTGName = GetMIDIButtonTGName (Event);
-				DisplayMIDIButtonOverlay ("TG Select", pTGName ? pTGName : "TG", 1000);
+				DisplayPerformanceTGOverview ();
+				ArmPerformanceOverviewTimer (4000, false);
 				return;
 			}
 
@@ -511,42 +504,34 @@ void CUIMenu::EventHandler (TMenuEvent Event)
 
 	case MenuEventTG1:
 		TGSelectHandler (0);
-		DisplayMIDIButtonOverlay ("TG Select", "TG1", 1000);
 		break;
 
 	case MenuEventTG2:
 		TGSelectHandler (1);
-		DisplayMIDIButtonOverlay ("TG Select", "TG2", 1000);
 		break;
 
 	case MenuEventTG3:
 		TGSelectHandler (2);
-		DisplayMIDIButtonOverlay ("TG Select", "TG3", 1000);
 		break;
 
 	case MenuEventTG4:
 		TGSelectHandler (3);
-		DisplayMIDIButtonOverlay ("TG Select", "TG4", 1000);
 		break;
 
 	case MenuEventTG5:
 		TGSelectHandler (4);
-		DisplayMIDIButtonOverlay ("TG Select", "TG5", 1000);
 		break;
 
 	case MenuEventTG6:
 		TGSelectHandler (5);
-		DisplayMIDIButtonOverlay ("TG Select", "TG6", 1000);
 		break;
 
 	case MenuEventTG7:
 		TGSelectHandler (6);
-		DisplayMIDIButtonOverlay ("TG Select", "TG7", 1000);
 		break;
 
 	case MenuEventTG8:
 		TGSelectHandler (7);
-		DisplayMIDIButtonOverlay ("TG Select", "TG8", 1000);
 		break;
 
 	case MenuEventEffects:
@@ -642,9 +627,18 @@ void CUIMenu::EventHandler (TMenuEvent Event)
 	case MenuEventAltPot:
 		if (IsPerformanceMenuActive ())
 		{
-			m_bPerformanceOverviewShowTGParameter = true;
-			m_nPerformanceOverviewTGParameter = m_pMiniDexed->GetAltPotTGParameter ();
-			m_bPerformanceOverviewEditActive = false;
+			CMiniDexed::TTGParameter Param = m_pMiniDexed->GetAltPotTGParameter ();
+			if (Param != CMiniDexed::TGParameterUnknown)
+			{
+				m_bPerformanceOverviewShowTGParameter = true;
+				m_nPerformanceOverviewTGParameter = Param;
+				m_bPerformanceOverviewEditActive = false;
+			}
+			else
+			{
+				m_bPerformanceOverviewShowTGParameter = false;
+				m_bPerformanceOverviewEditActive = false;
+			}
 		}
 		DisplayAltPotBankOverlay ();
 		break;
@@ -653,9 +647,18 @@ void CUIMenu::EventHandler (TMenuEvent Event)
 		m_pMiniDexed->SelectPreviousAltPotBank ();
 		if (IsPerformanceMenuActive ())
 		{
-			m_bPerformanceOverviewShowTGParameter = true;
-			m_nPerformanceOverviewTGParameter = m_pMiniDexed->GetAltPotTGParameter ();
-			m_bPerformanceOverviewEditActive = false;
+			CMiniDexed::TTGParameter Param = m_pMiniDexed->GetAltPotTGParameter ();
+			if (Param != CMiniDexed::TGParameterUnknown)
+			{
+				m_bPerformanceOverviewShowTGParameter = true;
+				m_nPerformanceOverviewTGParameter = Param;
+				m_bPerformanceOverviewEditActive = false;
+			}
+			else
+			{
+				m_bPerformanceOverviewShowTGParameter = false;
+				m_bPerformanceOverviewEditActive = false;
+			}
 		}
 		DisplayAltPotBankOverlay ();
 		break;
@@ -664,9 +667,18 @@ void CUIMenu::EventHandler (TMenuEvent Event)
 		m_pMiniDexed->SelectNextAltPotBank ();
 		if (IsPerformanceMenuActive ())
 		{
-			m_bPerformanceOverviewShowTGParameter = true;
-			m_nPerformanceOverviewTGParameter = m_pMiniDexed->GetAltPotTGParameter ();
-			m_bPerformanceOverviewEditActive = false;
+			CMiniDexed::TTGParameter Param = m_pMiniDexed->GetAltPotTGParameter ();
+			if (Param != CMiniDexed::TGParameterUnknown)
+			{
+				m_bPerformanceOverviewShowTGParameter = true;
+				m_nPerformanceOverviewTGParameter = Param;
+				m_bPerformanceOverviewEditActive = false;
+			}
+			else
+			{
+				m_bPerformanceOverviewShowTGParameter = false;
+				m_bPerformanceOverviewEditActive = false;
+			}
 		}
 		DisplayAltPotBankOverlay ();
 		break;
@@ -794,10 +806,19 @@ bool CUIMenu::HandlePerformanceOverviewShortcut (TMenuEvent Event)
 		return true;
 
 	case MenuEventAltPot:
+	{
+		CMiniDexed::TTGParameter Param = m_pMiniDexed->GetAltPotTGParameter ();
+		if (Param == CMiniDexed::TGParameterUnknown)
+		{
+			m_bPerformanceOverviewShowTGParameter = false;
+			m_bPerformanceOverviewEditActive = false;
+			return true;
+		}
 		m_bPerformanceOverviewShowTGParameter = true;
-		m_nPerformanceOverviewTGParameter = m_pMiniDexed->GetAltPotTGParameter ();
+		m_nPerformanceOverviewTGParameter = Param;
 		m_bPerformanceOverviewEditActive = false;
 		return true;
+	}
 
 	case MenuEventTGCutoff:
 		m_bPerformanceOverviewShowTGParameter = true;
@@ -957,14 +978,28 @@ std::string CUIMenu::FormatOverviewTGParameterValue (unsigned nTGParameter, int 
 
 	case CMiniDexed::TGParameterNoteShift:
 	{
-		int nOct = nValue / 12;
-		if (nOct > 0)
+		if (m_pMiniDexed->GetAltPotBank () == CMiniDexed::AltPotBankNoteShift)
 		{
-			snprintf (Buffer, sizeof Buffer, "+%d", nOct);
+			if (nValue > 0)
+			{
+				snprintf (Buffer, sizeof Buffer, "+%2d", nValue);
+			}
+			else
+			{
+				snprintf (Buffer, sizeof Buffer, "%3d", nValue);
+			}
 		}
 		else
 		{
-			snprintf (Buffer, sizeof Buffer, "%2d", nOct);
+			int nOct = nValue / 12;
+			if (nOct > 0)
+			{
+				snprintf (Buffer, sizeof Buffer, "+%d", nOct);
+			}
+			else
+			{
+				snprintf (Buffer, sizeof Buffer, "%2d", nOct);
+			}
 		}
 		return std::string (Buffer);
 	}
@@ -1112,8 +1147,16 @@ void CUIMenu::ShowAltPotController (unsigned nTG, const char *pParameterName, in
 
 	if (IsPerformanceMenuActive ())
 	{
-		m_bPerformanceOverviewShowTGParameter = true;
-		m_nPerformanceOverviewTGParameter = m_pMiniDexed->GetAltPotTGParameter ();
+		CMiniDexed::TTGParameter Param = m_pMiniDexed->GetAltPotTGParameter ();
+		if (Param != CMiniDexed::TGParameterUnknown)
+		{
+			m_bPerformanceOverviewShowTGParameter = true;
+			m_nPerformanceOverviewTGParameter = Param;
+		}
+		else
+		{
+			m_bPerformanceOverviewShowTGParameter = false;
+		}
 	}
 
 	std::string Title = "TG" + std::to_string (nTG + 1) + " ";
@@ -1133,6 +1176,15 @@ void CUIMenu::ShowAltPotController (unsigned nTG, const char *pParameterName, in
 		}
 		Value += std::to_string (nOctave);
 		Value += " Oct";
+	}
+	else if (m_pMiniDexed->GetAltPotBank () == CMiniDexed::AltPotBankNoteShift)
+	{
+		if (nValue > 0)
+		{
+			Value = "+";
+		}
+		Value += std::to_string (nValue);
+		Value += " st";
 	}
 	else
 	{

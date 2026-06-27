@@ -179,7 +179,7 @@ private:
 	static bool GetPerformanceOverviewTGFromEvent (TMenuEvent Event, unsigned *pTG);
 	bool IsPerformanceMenuActive (void) const;
 	static std::string Short3 (const std::string &Text);
-	static std::string FormatOverviewTGParameterValue (unsigned nTGParameter, int nValue);
+	std::string FormatOverviewTGParameterValue (unsigned nTGParameter, int nValue);
 	static void PerformanceOverviewTimerHandler (TKernelTimerHandle hTimer, void *pParam, void *pContext);
 
 	static void TimerHandler (TKernelTimerHandle hTimer, void *pParam, void *pContext);
