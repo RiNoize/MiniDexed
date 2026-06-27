@@ -82,6 +82,7 @@ public:
 		MenuEventAltPot,
 		MenuEventAltPotPrev,
 		MenuEventAltPotNext,
+		MenuEventAltPotMode,
 		MenuEventUnknown
 	};
 
@@ -169,6 +170,7 @@ private:
 
 	void ArmPerformanceOverviewTimer (unsigned nDelayMS, bool bShowOverviewNext, bool bResetParameterHold = true);
 	void DisplayPerformanceTGOverview (void);
+	void DisplayAltPotGlobalLabels (void);
 	void DisplayAltPotBankOverlay (void);
 	void DisplayMIDIButtonOverlay (const char *pLine1, const char *pLine2, unsigned nDelayMS);
 	static const char *GetMIDIButtonFunctionName (TMenuEvent Event);
@@ -246,6 +248,8 @@ private:
 	bool m_bPerformanceOverviewShowTGParameter=false;
 	unsigned m_nPerformanceOverviewTGParameter=0;
 	bool m_bPerformanceOverviewNoteShiftFine=false;
+	bool m_bPerformanceOverviewAltPotGlobalLabels=false;
+	unsigned m_nPerformanceOverviewAltPotGlobalControl=0;
 	bool m_bPerformanceOverviewEditActive=false;
 	unsigned m_nPerformanceOverviewEditTG=0;
 	unsigned m_nPerformanceOverviewHoldRemainingMS=0;

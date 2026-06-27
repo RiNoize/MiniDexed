@@ -771,7 +771,14 @@ bool CMIDIDevice::HandleMIDISystemCC(const u8 ucCC, const u8 ucCCval)
 		}
 		if (m_nMIDISystemCCAltPot != 0) {
 			if (ucCC == MIDISystemCCMap[m_nMIDISystemCCAltPot][tg]) {
-				m_pSynthesizer->SetAltPotValue (ucCCval, tg);
+				if (m_pSynthesizer->IsAltPotGlobalMode ())
+				{
+					m_pSynthesizer->SetAltPotGlobalValue (ucCCval, tg);
+				}
+				else
+				{
+					m_pSynthesizer->SetAltPotValue (ucCCval, tg);
+				}
 				return true;
 			}
 		}

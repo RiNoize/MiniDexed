@@ -81,6 +81,7 @@ CMiniDexed::CMiniDexed (CConfig *pConfig, CInterruptSystem *pInterrupt,
 		
 	m_nToneGenerators = m_pConfig->GetToneGenerators();
 	m_AltPotBank = AltPotBankOctave;
+	m_AltPotMode = AltPotModeIndividual;
 	m_nPolyphony = m_pConfig->GetPolyphony();
 	LOGNOTE("Tone Generators=%d, Polyphony=%d", m_nToneGenerators, m_nPolyphony);
 
@@ -1153,6 +1154,27 @@ void CMiniDexed::SelectNextAltPotBank (void)
 		AltPotBankNoteShift : AltPotBankOctave;
 }
 
+void CMiniDexed::ToggleAltPotMode (void)
+{
+	m_AltPotMode = (m_AltPotMode == AltPotModeIndividual) ?
+		AltPotModeGlobal : AltPotModeIndividual;
+}
+
+CMiniDexed::TAltPotMode CMiniDexed::GetAltPotMode (void) const
+{
+	return m_AltPotMode;
+}
+
+bool CMiniDexed::IsAltPotGlobalMode (void) const
+{
+	return m_AltPotMode == AltPotModeGlobal;
+}
+
+const char *CMiniDexed::GetAltPotModeName (void) const
+{
+	return IsAltPotGlobalMode () ? "Global" : "Individual";
+}
+
 CMiniDexed::TAltPotBank CMiniDexed::GetAltPotBank (void) const
 {
 	return m_AltPotBank;
@@ -1170,7 +1192,51 @@ const char *CMiniDexed::GetAltPotBankName (void) const
 
 CMiniDexed::TTGParameter CMiniDexed::GetAltPotTGParameter (void) const
 {
+	if (IsAltPotGlobalMode ())
+	{
+		return TGParameterUnknown;
+	}
+
 	return TGParameterNoteShift;
+}
+
+CMiniDexed::TTGParameter CMiniDexed::GetAltPotGlobalTGParameter (unsigned nControl) const
+{
+	switch (nControl)
+	{
+	case AltPotGlobalCutoff:			return TGParameterCutoff;
+	case AltPotGlobalResonance:		return TGParameterResonance;
+	case AltPotGlobalReverbSend:		return TGParameterReverbSend;
+	case AltPotGlobalPortamentoTime:		return TGParameterPortamentoTime;
+	case AltPotGlobalVolumeTrim:		return TGParameterUnknown; // live Expression trim, not saved TG volume
+	default:				return TGParameterUnknown;
+	}
+}
+
+const char *CMiniDexed::GetAltPotGlobalControlName (unsigned nControl) const
+{
+	switch (nControl)
+	{
+	case AltPotGlobalCutoff:			return "Cutoff";
+	case AltPotGlobalResonance:		return "Resonance";
+	case AltPotGlobalReverbSend:		return "Reverb Send";
+	case AltPotGlobalVolumeTrim:		return "Volume Trim";
+	case AltPotGlobalPortamentoTime:		return "Portamento";
+	default:				return "---";
+	}
+}
+
+const char *CMiniDexed::GetAltPotGlobalControlShortName (unsigned nControl) const
+{
+	switch (nControl)
+	{
+	case AltPotGlobalCutoff:			return "Cut";
+	case AltPotGlobalResonance:		return "Res";
+	case AltPotGlobalReverbSend:		return "Rev";
+	case AltPotGlobalVolumeTrim:		return "Vol";
+	case AltPotGlobalPortamentoTime:		return "Por";
+	default:				return "---";
+	}
 }
 
 int CMiniDexed::SetAltPotValue (unsigned nValue, unsigned nTG)
@@ -1221,6 +1287,68 @@ int CMiniDexed::SetAltPotValue (unsigned nValue, unsigned nTG)
 		break;
 	}
 
+	m_UI.ShowAltPotController (nTG, GetAltPotBankName (), nConvertedValue);
+	return nConvertedValue;
+}
+
+int CMiniDexed::SetAltPotGlobalValue (unsigned nValue, unsigned nControl)
+{
+	if (nControl >= 8)
+	{
+		return 0;
+	}
+
+	int nConvertedValue = 0;
+
+	switch (nControl)
+	{
+	case AltPotGlobalCutoff:
+		nConvertedValue = (int) ((nValue * 99 + 63) / 127);
+		for (unsigned nTG = 0; nTG < m_nToneGenerators; nTG++)
+		{
+			SetTGParameter (TGParameterCutoff, nConvertedValue, nTG);
+		}
+		break;
+
+	case AltPotGlobalResonance:
+		nConvertedValue = (int) ((nValue * 99 + 63) / 127);
+		for (unsigned nTG = 0; nTG < m_nToneGenerators; nTG++)
+		{
+			SetTGParameter (TGParameterResonance, nConvertedValue, nTG);
+		}
+		break;
+
+	case AltPotGlobalReverbSend:
+		nConvertedValue = (int) ((nValue * 99 + 63) / 127);
+		for (unsigned nTG = 0; nTG < m_nToneGenerators; nTG++)
+		{
+			SetTGParameter (TGParameterReverbSend, nConvertedValue, nTG);
+		}
+		break;
+
+	case AltPotGlobalVolumeTrim:
+		// Expression trims the audible gain of every TG while preserving the
+		// individual saved Volume fader balances.
+		nConvertedValue = (int) constrain ((int) nValue, 0, 127);
+		for (unsigned nTG = 0; nTG < m_nToneGenerators; nTG++)
+		{
+			SetExpression (nConvertedValue, nTG);
+		}
+		break;
+
+	case AltPotGlobalPortamentoTime:
+		nConvertedValue = (int) ((nValue * 99 + 63) / 127);
+		for (unsigned nTG = 0; nTG < m_nToneGenerators; nTG++)
+		{
+			SetTGParameter (TGParameterPortamentoTime, nConvertedValue, nTG);
+		}
+		break;
+
+	default:
+		break;
+	}
+
+	m_UI.ShowAltPotController (nControl, GetAltPotGlobalControlName (nControl), nConvertedValue);
 	return nConvertedValue;
 }
 

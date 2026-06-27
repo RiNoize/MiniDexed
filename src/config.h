@@ -260,6 +260,7 @@ public:
 	unsigned GetMIDIButtonAltPot (void) const;
 	unsigned GetMIDIButtonAltPotPrev (void) const;
 	unsigned GetMIDIButtonAltPotNext (void) const;
+	unsigned GetMIDIButtonAltPotMode (void) const;
 	
 	// KY-040 Rotary Encoder
 	// GPIO pin numbers are chip numbers, not header positions
@@ -433,6 +434,7 @@ private:
 	unsigned m_nMIDIButtonAltPot;
 	unsigned m_nMIDIButtonAltPotPrev;
 	unsigned m_nMIDIButtonAltPotNext;
+	unsigned m_nMIDIButtonAltPotMode;
 
 	bool m_bEncoderEnabled;
 	unsigned m_nEncoderPinClock;

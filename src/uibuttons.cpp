@@ -339,6 +339,7 @@ boolean CUIButtons::Initialize (void)
 	m_AltPotMidi = ccToMidiPin( m_pConfig->GetMIDIButtonAltPot ());
 	m_AltPotPrevMidi = ccToMidiPin( m_pConfig->GetMIDIButtonAltPotPrev ());
 	m_AltPotNextMidi = ccToMidiPin( m_pConfig->GetMIDIButtonAltPotNext ());
+	m_AltPotModeMidi = ccToMidiPin( m_pConfig->GetMIDIButtonAltPotMode ());
 	
 	// First sanity check and convert the timeouts:
 	// Internally values are in tenths of a millisecond, but config values
@@ -367,7 +368,7 @@ boolean CUIButtons::Initialize (void)
 		m_TGVoiceMidi, m_TGBankMidi, m_TGVolumeMidi, m_TGPanMidi, m_TGReverbSendMidi, m_TGDetuneMidi, m_TGOctaveMidi,
 		m_TGCutoffMidi, m_TGResonanceMidi, m_TGPitchBendMidi, m_TGPortamentoMidi, m_TGPolyMonoMidi,
 		m_TGModulationMidi, m_TGChannelMidi, m_TGEditVoiceMidi,
-		m_AltPotMidi, m_AltPotPrevMidi, m_AltPotNextMidi
+		m_AltPotMidi, m_AltPotPrevMidi, m_AltPotNextMidi, m_AltPotModeMidi
 	};
 	CUIButton::BtnTrigger triggers[MAX_BUTTONS] = {
 		// Normal buttons
@@ -383,7 +384,8 @@ boolean CUIButtons::Initialize (void)
 		CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick,
 		CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick,
 		CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick,
-		CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick
+		CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick,
+		CUIButton::BtnTriggerClick
 	};
 	CUIButton::BtnEvent events[MAX_BUTTONS] = {
 		// Normal buttons
@@ -438,7 +440,8 @@ boolean CUIButtons::Initialize (void)
 		CUIButton::BtnEventTGEditVoice,
 		CUIButton::BtnEventAltPot,
 		CUIButton::BtnEventAltPotPrev,
-		CUIButton::BtnEventAltPotNext
+		CUIButton::BtnEventAltPotNext,
+		CUIButton::BtnEventAltPotMode
 	};
 
 	// Setup normal GPIO buttons first

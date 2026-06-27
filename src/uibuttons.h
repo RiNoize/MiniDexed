@@ -28,7 +28,7 @@
 #define BUTTONS_UPDATE_NUM_TICKS 100
 #define DEBOUNCE_TIME 20
 #define MAX_GPIO_BUTTONS 11  // 5 UI buttons, 6 Program/Bank/TG Select buttons
-#define MAX_MIDI_BUTTONS 40
+#define MAX_MIDI_BUTTONS 41
 #define MAX_BUTTONS (MAX_GPIO_BUTTONS+MAX_MIDI_BUTTONS)
 
 class CUIButtons;
@@ -87,7 +87,8 @@ public:
 		BtnEventAltPot = 38,
 		BtnEventAltPotPrev = 39,
 		BtnEventAltPotNext = 40,
-		BtnEventUnknown = 41
+		BtnEventAltPotMode = 41,
+		BtnEventUnknown = 42
 	};
 	
 	CUIButton (void);
@@ -235,6 +236,7 @@ private:
 	unsigned m_AltPotMidi;
 	unsigned m_AltPotPrevMidi;
 	unsigned m_AltPotNextMidi;
+	unsigned m_AltPotModeMidi;
 
 	BtnEventHandler *m_eventHandler;
 	void *m_eventParam;

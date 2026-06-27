@@ -245,6 +245,7 @@ void CConfig::Load (void)
 	m_nMIDIButtonAltPot = m_Properties.GetNumber ("MIDIButtonAltPot", 0);
 	m_nMIDIButtonAltPotPrev = m_Properties.GetNumber ("MIDIButtonAltPotPrev", 0);
 	m_nMIDIButtonAltPotNext = m_Properties.GetNumber ("MIDIButtonAltPotNext", 0);
+	m_nMIDIButtonAltPotMode = m_Properties.GetNumber ("MIDIButtonAltPotMode", 0);
 	
 	m_bEncoderEnabled = m_Properties.GetNumber ("EncoderEnabled", 0) != 0;
 	m_nEncoderPinClock = m_Properties.GetNumber ("EncoderPinClock", 10);
@@ -954,6 +955,11 @@ unsigned CConfig::GetMIDIButtonAltPotPrev (void) const
 unsigned CConfig::GetMIDIButtonAltPotNext (void) const
 {
 	return m_nMIDIButtonAltPotNext;
+}
+
+unsigned CConfig::GetMIDIButtonAltPotMode (void) const
+{
+	return m_nMIDIButtonAltPotMode;
 }
 
 bool CConfig::GetEncoderEnabled (void) const

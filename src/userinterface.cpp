@@ -516,6 +516,10 @@ void CUserInterface::UIButtonsEventHandler (CUIButton::BtnEvent Event)
 		m_Menu.EventHandler (CUIMenu::MenuEventAltPotNext);
 		break;
 
+	case CUIButton::BtnEventAltPotMode:
+		m_Menu.EventHandler (CUIMenu::MenuEventAltPotMode);
+		break;
+
 	default:
 		break;
 	}

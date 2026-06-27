@@ -627,20 +627,25 @@ void CUIMenu::EventHandler (TMenuEvent Event)
 	case MenuEventAltPot:
 		if (IsPerformanceMenuActive ())
 		{
-			CMiniDexed::TTGParameter Param = m_pMiniDexed->GetAltPotTGParameter ();
-			if (Param != CMiniDexed::TGParameterUnknown)
+			if (m_pMiniDexed->IsAltPotGlobalMode ())
 			{
-				m_bPerformanceOverviewShowTGParameter = true;
-				m_nPerformanceOverviewTGParameter = Param;
-				m_bPerformanceOverviewNoteShiftFine =
-					m_pMiniDexed->GetAltPotBank () == CMiniDexed::AltPotBankNoteShift;
+				m_bPerformanceOverviewShowTGParameter = false;
+				m_bPerformanceOverviewNoteShiftFine = false;
+				m_bPerformanceOverviewAltPotGlobalLabels = true;
 				m_bPerformanceOverviewEditActive = false;
 			}
 			else
 			{
-				m_bPerformanceOverviewShowTGParameter = false;
-				m_bPerformanceOverviewNoteShiftFine = false;
-				m_bPerformanceOverviewEditActive = false;
+				CMiniDexed::TTGParameter Param = m_pMiniDexed->GetAltPotTGParameter ();
+				if (Param != CMiniDexed::TGParameterUnknown)
+				{
+					m_bPerformanceOverviewShowTGParameter = true;
+					m_bPerformanceOverviewAltPotGlobalLabels = false;
+					m_nPerformanceOverviewTGParameter = Param;
+					m_bPerformanceOverviewNoteShiftFine =
+						m_pMiniDexed->GetAltPotBank () == CMiniDexed::AltPotBankNoteShift;
+					m_bPerformanceOverviewEditActive = false;
+				}
 			}
 		}
 		DisplayAltPotBankOverlay ();
@@ -654,15 +659,10 @@ void CUIMenu::EventHandler (TMenuEvent Event)
 			if (Param != CMiniDexed::TGParameterUnknown)
 			{
 				m_bPerformanceOverviewShowTGParameter = true;
+				m_bPerformanceOverviewAltPotGlobalLabels = false;
 				m_nPerformanceOverviewTGParameter = Param;
 				m_bPerformanceOverviewNoteShiftFine =
 					m_pMiniDexed->GetAltPotBank () == CMiniDexed::AltPotBankNoteShift;
-				m_bPerformanceOverviewEditActive = false;
-			}
-			else
-			{
-				m_bPerformanceOverviewShowTGParameter = false;
-				m_bPerformanceOverviewNoteShiftFine = false;
 				m_bPerformanceOverviewEditActive = false;
 			}
 		}
@@ -677,19 +677,39 @@ void CUIMenu::EventHandler (TMenuEvent Event)
 			if (Param != CMiniDexed::TGParameterUnknown)
 			{
 				m_bPerformanceOverviewShowTGParameter = true;
+				m_bPerformanceOverviewAltPotGlobalLabels = false;
 				m_nPerformanceOverviewTGParameter = Param;
 				m_bPerformanceOverviewNoteShiftFine =
 					m_pMiniDexed->GetAltPotBank () == CMiniDexed::AltPotBankNoteShift;
 				m_bPerformanceOverviewEditActive = false;
 			}
-			else
+		}
+		DisplayAltPotBankOverlay ();
+		break;
+
+	case MenuEventAltPotMode:
+		m_pMiniDexed->ToggleAltPotMode ();
+		if (IsPerformanceMenuActive ())
+		{
+			if (m_pMiniDexed->IsAltPotGlobalMode ())
 			{
 				m_bPerformanceOverviewShowTGParameter = false;
 				m_bPerformanceOverviewNoteShiftFine = false;
+				m_bPerformanceOverviewAltPotGlobalLabels = true;
+				m_bPerformanceOverviewEditActive = false;
+			}
+			else
+			{
+				CMiniDexed::TTGParameter Param = m_pMiniDexed->GetAltPotTGParameter ();
+				m_bPerformanceOverviewShowTGParameter = Param != CMiniDexed::TGParameterUnknown;
+				m_bPerformanceOverviewAltPotGlobalLabels = false;
+				m_nPerformanceOverviewTGParameter = Param;
+				m_bPerformanceOverviewNoteShiftFine =
+					m_pMiniDexed->GetAltPotBank () == CMiniDexed::AltPotBankNoteShift;
 				m_bPerformanceOverviewEditActive = false;
 			}
 		}
-		DisplayAltPotBankOverlay ();
+		DisplayMIDIButtonOverlay ("AltPot Mode", m_pMiniDexed->GetAltPotModeName (), 1000);
 		break;
 
 	default:
@@ -760,6 +780,7 @@ const char *CUIMenu::GetMIDIButtonFunctionName (TMenuEvent Event)
 	case MenuEventTGChannel:	return "Channel";
 	case MenuEventTGEditVoice:	return "Edit Voice";
 	case MenuEventAltPot:		return "Alt Knobs";
+	case MenuEventAltPotMode:	return "AltPot Mode";
 	default:			return 0;
 	}
 }
@@ -782,6 +803,11 @@ const char *CUIMenu::GetMIDIButtonTGName (TMenuEvent Event)
 
 bool CUIMenu::HandlePerformanceOverviewShortcut (TMenuEvent Event)
 {
+	if (Event != MenuEventAltPot)
+	{
+		m_bPerformanceOverviewAltPotGlobalLabels = false;
+	}
+
 	switch (Event)
 	{
 	case MenuEventTGVoice:
@@ -822,14 +848,25 @@ bool CUIMenu::HandlePerformanceOverviewShortcut (TMenuEvent Event)
 
 	case MenuEventAltPot:
 	{
+		if (m_pMiniDexed->IsAltPotGlobalMode ())
+		{
+			m_bPerformanceOverviewShowTGParameter = false;
+			m_bPerformanceOverviewNoteShiftFine = false;
+			m_bPerformanceOverviewAltPotGlobalLabels = true;
+			m_bPerformanceOverviewEditActive = false;
+			return true;
+		}
+
 		CMiniDexed::TTGParameter Param = m_pMiniDexed->GetAltPotTGParameter ();
 		if (Param == CMiniDexed::TGParameterUnknown)
 		{
 			m_bPerformanceOverviewShowTGParameter = false;
+			m_bPerformanceOverviewAltPotGlobalLabels = false;
 			m_bPerformanceOverviewEditActive = false;
 			return true;
 		}
 		m_bPerformanceOverviewShowTGParameter = true;
+		m_bPerformanceOverviewAltPotGlobalLabels = false;
 		m_nPerformanceOverviewTGParameter = Param;
 		m_bPerformanceOverviewNoteShiftFine =
 			m_pMiniDexed->GetAltPotBank () == CMiniDexed::AltPotBankNoteShift;
@@ -1065,6 +1102,13 @@ std::string CUIMenu::FormatOverviewTGParameterValue (unsigned nTGParameter, int 
 
 void CUIMenu::DisplayPerformanceTGOverview (void)
 {
+	if (m_bPerformanceOverviewAltPotGlobalLabels
+		&& (!m_bPerformanceOverviewShowTGParameter || m_nPerformanceOverviewHoldRemainingMS <= 3000))
+	{
+		DisplayAltPotGlobalLabels ();
+		return;
+	}
+
 	std::string Line1;
 	std::string Line2;
 
@@ -1101,6 +1145,26 @@ void CUIMenu::DisplayPerformanceTGOverview (void)
 	m_pUI->DisplayWrite ("", Line1.c_str (), Line2.c_str (), false, false);
 }
 
+
+void CUIMenu::DisplayAltPotGlobalLabels (void)
+{
+	std::string Line1;
+	std::string Line2;
+
+	for (unsigned nControl = 0; nControl < 8; nControl++)
+	{
+		std::string Token = m_pMiniDexed->GetAltPotGlobalControlShortName (nControl);
+		std::string &Line = (nControl < 4) ? Line1 : Line2;
+		if (!Line.empty ())
+		{
+			Line += " ";
+		}
+		Line += Token;
+	}
+
+	m_pUI->DisplayWrite ("", Line1.c_str (), Line2.c_str (), false, false);
+}
+
 void CUIMenu::ArmPerformanceOverviewTimer (unsigned nDelayMS, bool bShowOverviewNext, bool bResetParameterHold)
 {
 	// When Performance page 2 is showing a TG parameter (Volume, Pan,
@@ -1108,7 +1172,8 @@ void CUIMenu::ArmPerformanceOverviewTimer (unsigned nDelayMS, bool bShowOverview
 	// for a bounded hold time.  Any new edit/moving controller resets the hold
 	// to 4 seconds.  When the hold expires the normal Performance page 1 / page 2
 	// sequence resumes.
-	if (m_bPerformanceOverviewShowTGParameter && nDelayMS >= 4000 && !bShowOverviewNext)
+	if ((m_bPerformanceOverviewShowTGParameter || m_bPerformanceOverviewAltPotGlobalLabels)
+		&& nDelayMS >= 4000 && !bShowOverviewNext)
 	{
 		if (bResetParameterHold || m_nPerformanceOverviewHoldRemainingMS == 0)
 		{
@@ -1150,7 +1215,7 @@ void CUIMenu::PerformanceOverviewTimerHandler (TKernelTimerHandle hTimer, void *
 	{
 		pThis->DisplayPerformanceTGOverview ();
 
-		if (pThis->m_bPerformanceOverviewShowTGParameter
+		if ((pThis->m_bPerformanceOverviewShowTGParameter || pThis->m_bPerformanceOverviewAltPotGlobalLabels)
 			&& pThis->m_nPerformanceOverviewHoldRemainingMS > 0)
 		{
 			if (pThis->m_nPerformanceOverviewHoldRemainingMS > 150)
@@ -1161,6 +1226,7 @@ void CUIMenu::PerformanceOverviewTimerHandler (TKernelTimerHandle hTimer, void *
 			else
 			{
 				pThis->m_nPerformanceOverviewHoldRemainingMS = 0;
+				pThis->m_bPerformanceOverviewAltPotGlobalLabels = false;
 				pThis->m_bPerformanceOverviewSuppressArm = true;
 				pThis->EventHandler (MenuEventUpdate);
 				pThis->m_bPerformanceOverviewSuppressArm = false;
@@ -1185,7 +1251,14 @@ void CUIMenu::PerformanceOverviewTimerHandler (TKernelTimerHandle hTimer, void *
 
 void CUIMenu::DisplayAltPotBankOverlay (void)
 {
-	DisplayMIDIButtonOverlay ("Alt Knobs", m_pMiniDexed->GetAltPotBankName (), 1000);
+	if (m_pMiniDexed->IsAltPotGlobalMode ())
+	{
+		DisplayMIDIButtonOverlay ("AltPot Mode", "Global", 1000);
+	}
+	else
+	{
+		DisplayMIDIButtonOverlay ("Alt Knobs", m_pMiniDexed->GetAltPotBankName (), 1000);
+	}
 }
 
 void CUIMenu::DisplayMIDIButtonOverlay (const char *pLine1, const char *pLine2, unsigned nDelayMS)
@@ -1205,6 +1278,39 @@ void CUIMenu::ShowAltPotController (unsigned nTG, const char *pParameterName, in
 	(void) pParameterName;
 	(void) nValue;
 
+	if (!IsPerformanceMenuActive ())
+	{
+		return;
+	}
+
+	if (m_pMiniDexed->IsAltPotGlobalMode ())
+	{
+		m_bPerformanceOverviewAltPotGlobalLabels = true;
+		m_nPerformanceOverviewAltPotGlobalControl = nTG;
+		m_bPerformanceOverviewNoteShiftFine = false;
+		m_bPerformanceOverviewEditActive = false;
+
+		CMiniDexed::TTGParameter Param = m_pMiniDexed->GetAltPotGlobalTGParameter (nTG);
+		if (Param != CMiniDexed::TGParameterUnknown)
+		{
+			m_bPerformanceOverviewShowTGParameter = true;
+			m_nPerformanceOverviewTGParameter = Param;
+			m_nPerformanceOverviewHoldRemainingMS = 4000;
+			DisplayPerformanceTGOverview ();
+		}
+		else
+		{
+			// Volume Trim is live Expression, not the saved Volume parameter, so
+			// showing TG Volume values would be misleading.  Go straight to page 2b.
+			m_bPerformanceOverviewShowTGParameter = false;
+			m_nPerformanceOverviewHoldRemainingMS = 3000;
+			DisplayPerformanceTGOverview ();
+		}
+
+		ArmPerformanceOverviewTimer (4000, false);
+		return;
+	}
+
 	if (nTG >= m_nToneGenerators)
 	{
 		return;
@@ -1213,18 +1319,16 @@ void CUIMenu::ShowAltPotController (unsigned nTG, const char *pParameterName, in
 	// Do not show a third/temporary AltPot page while a controller is moving.
 	// Page 2 is the live monitor; keep it armed and let the fast refresh show
 	// the real Performance NoteShift value.
-	if (IsPerformanceMenuActive ())
+	CMiniDexed::TTGParameter Param = m_pMiniDexed->GetAltPotTGParameter ();
+	if (Param != CMiniDexed::TGParameterUnknown)
 	{
-		CMiniDexed::TTGParameter Param = m_pMiniDexed->GetAltPotTGParameter ();
-		if (Param != CMiniDexed::TGParameterUnknown)
-		{
-			m_bPerformanceOverviewShowTGParameter = true;
-			m_nPerformanceOverviewTGParameter = Param;
-			m_bPerformanceOverviewNoteShiftFine =
-				m_pMiniDexed->GetAltPotBank () == CMiniDexed::AltPotBankNoteShift;
-			DisplayPerformanceTGOverview ();
-			ArmPerformanceOverviewTimer (4000, false);
-		}
+		m_bPerformanceOverviewShowTGParameter = true;
+		m_bPerformanceOverviewAltPotGlobalLabels = false;
+		m_nPerformanceOverviewTGParameter = Param;
+		m_bPerformanceOverviewNoteShiftFine =
+			m_pMiniDexed->GetAltPotBank () == CMiniDexed::AltPotBankNoteShift;
+		DisplayPerformanceTGOverview ();
+		ArmPerformanceOverviewTimer (4000, false);
 	}
 }
 

@@ -164,6 +164,22 @@ public:
 		AltPotBankUnknown
 	};
 
+	enum TAltPotMode
+	{
+		AltPotModeIndividual,
+		AltPotModeGlobal
+	};
+
+	enum TAltPotGlobalControl
+	{
+		AltPotGlobalCutoff,
+		AltPotGlobalResonance,
+		AltPotGlobalReverbSend,
+		AltPotGlobalVolumeTrim,
+		AltPotGlobalPortamentoTime,
+		AltPotGlobalUnknown
+	};
+
 	enum TParameter
 	{
 		ParameterCompressorEnable,
@@ -238,10 +254,18 @@ public:
 
 	void SelectPreviousAltPotBank (void);
 	void SelectNextAltPotBank (void);
+	void ToggleAltPotMode (void);
+	TAltPotMode GetAltPotMode (void) const;
+	bool IsAltPotGlobalMode (void) const;
+	const char *GetAltPotModeName (void) const;
 	TAltPotBank GetAltPotBank (void) const;
 	const char *GetAltPotBankName (void) const;
 	TTGParameter GetAltPotTGParameter (void) const;
+	TTGParameter GetAltPotGlobalTGParameter (unsigned nControl) const;
+	const char *GetAltPotGlobalControlName (unsigned nControl) const;
+	const char *GetAltPotGlobalControlShortName (unsigned nControl) const;
 	int SetAltPotValue (unsigned nValue, unsigned nTG);
+	int SetAltPotGlobalValue (unsigned nValue, unsigned nControl);
 
 	// access (global or OP-related) parameter of the active voice of a TG
 	static const unsigned NoOP = 6;		// for global parameters
@@ -284,6 +308,7 @@ private:
 	
 	unsigned m_nToneGenerators;
 	TAltPotBank m_AltPotBank;
+	TAltPotMode m_AltPotMode;
 	unsigned m_nPolyphony;
 
 	CDexedAdapter *m_pTG[CConfig::AllToneGenerators];
