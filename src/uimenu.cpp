@@ -662,7 +662,13 @@ void CUIMenu::EventHandler (TMenuEvent Event)
 			m_nPerformanceOverviewHoldRemainingMS = 0;
 			m_bSysExDisplayActive = false;
 			m_nSysExDisplaySequence++;
+
+			// First jump to the Performance menu, then enter its Load item.
+			// This is equivalent to: Main -> Performance -> Load.
+			// Do not send another Select after that, because that could reload
+			// the performance and discard unsaved edits.
 			MainMenuSelectHandler ("Performance");
+			EventHandler (MenuEventSelect);
 		}
 		break;
 
