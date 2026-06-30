@@ -2712,7 +2712,13 @@ void CUIMenu::TGSelectHandler (unsigned nTG)
 	m_pCurrentMenu = s_TGMenu;
 	m_nCurrentMenuItem = nTG;
 	m_nCurrentSelection = nSelection;
-	m_nCurrentParameter = s_TGMenu[nSelection].Parameter;
+	// While positioned on the TG menu itself, m_nCurrentParameter must
+	// carry the active TG number.  When the user presses Select, this
+	// value is pushed to m_nMenuStackParameter[1], and the Voice/Bank/
+	// Volume/etc. editors use that stack entry to know which TG to edit.
+	// Using the selected menu item's parameter here makes Voice/Bank
+	// fall back to TG1 because those menu items have parameter 0.
+	m_nCurrentParameter = nTG;
 	m_nCurrentMenuDepth = 1;
 
 	// Place the main menu on the stack with Root as the parent
@@ -2777,7 +2783,11 @@ void CUIMenu::TGMenuSelectHandler (const char *pName)
 	m_pCurrentMenu = s_TGMenu;
 	m_nCurrentMenuItem = nTG;
 	m_nCurrentSelection = nTGMenuIndex;
-	m_nCurrentParameter = s_TGMenu[nTGMenuIndex].Parameter;
+	// Same rule as TGSelectHandler(): at TG-menu level the current
+	// parameter is the active TG index, not the TG sub-menu parameter.
+	// The sub-menu parameter is loaded after Select; the active TG must
+	// be available on the stack for the editor.
+	m_nCurrentParameter = nTG;
 	m_nCurrentMenuDepth = 1;
 
 	m_MenuStackParent[0] = s_MenuRoot;
