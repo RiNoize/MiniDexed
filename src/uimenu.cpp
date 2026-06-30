@@ -241,7 +241,7 @@ const CUIMenu::TParameter CUIMenu::s_TGParameter[CMiniDexed::TGParameterUnknown]
 	{0, 0, 0},											// TGParameterVoiceBankMSB (not used in menus)
 	{0, 0, 0},											// TGParameterVoiceBankLSB (not used in menus)
 	{0,	CSysExFileLoader::VoicesPerBank-1,	1},			// TGParameterProgram
-	{0,	127,					8, ToVolume},		// TGParameterVolume
+	{0,	127,					1, ToVolume},		// TGParameterVolume
 	{0,	127,					8, ToPan},		// TGParameterPan
 	{-99,	99,					1},			// TGParameterMasterTune
 	{-24,	24,					12, ToOctave},		// TGParameterNoteShift
