@@ -828,38 +828,45 @@ bool CUIMenu::HandlePerformanceOverviewShortcut (TMenuEvent Event)
 	{
 	case MenuEventTGVoice:
 		m_bPerformanceOverviewShowTGParameter = false;
+		m_bPerformanceOverviewAltPotGlobalLabels = false;
 		m_bPerformanceOverviewNoteShiftFine = false;
 		m_bPerformanceOverviewEditActive = false;
+		m_nPerformanceOverviewHoldRemainingMS = 0;
 		return true;
 
 	case MenuEventTGVolume:
 		m_bPerformanceOverviewShowTGParameter = true;
 		m_nPerformanceOverviewTGParameter = CMiniDexed::TGParameterVolume;
 		m_bPerformanceOverviewNoteShiftFine = false;
+		m_nPerformanceOverviewHoldRemainingMS = 0;
 		return true;
 
 	case MenuEventTGPan:
 		m_bPerformanceOverviewShowTGParameter = true;
 		m_nPerformanceOverviewTGParameter = CMiniDexed::TGParameterPan;
 		m_bPerformanceOverviewNoteShiftFine = false;
+		m_nPerformanceOverviewHoldRemainingMS = 0;
 		return true;
 
 	case MenuEventTGReverbSend:
 		m_bPerformanceOverviewShowTGParameter = true;
 		m_nPerformanceOverviewTGParameter = CMiniDexed::TGParameterReverbSend;
 		m_bPerformanceOverviewNoteShiftFine = false;
+		m_nPerformanceOverviewHoldRemainingMS = 0;
 		return true;
 
 	case MenuEventTGDetune:
 		m_bPerformanceOverviewShowTGParameter = true;
 		m_nPerformanceOverviewTGParameter = CMiniDexed::TGParameterMasterTune;
 		m_bPerformanceOverviewNoteShiftFine = false;
+		m_nPerformanceOverviewHoldRemainingMS = 0;
 		return true;
 
 	case MenuEventTGOctave:
 		m_bPerformanceOverviewShowTGParameter = true;
 		m_nPerformanceOverviewTGParameter = CMiniDexed::TGParameterNoteShift;
 		m_bPerformanceOverviewNoteShiftFine = false;
+		m_nPerformanceOverviewHoldRemainingMS = 0;
 		return true;
 
 	case MenuEventAltPot:
@@ -870,6 +877,7 @@ bool CUIMenu::HandlePerformanceOverviewShortcut (TMenuEvent Event)
 			m_bPerformanceOverviewNoteShiftFine = false;
 			m_bPerformanceOverviewAltPotGlobalLabels = true;
 			m_bPerformanceOverviewEditActive = false;
+			m_nPerformanceOverviewHoldRemainingMS = 0;
 			return true;
 		}
 
@@ -879,6 +887,7 @@ bool CUIMenu::HandlePerformanceOverviewShortcut (TMenuEvent Event)
 			m_bPerformanceOverviewShowTGParameter = false;
 			m_bPerformanceOverviewAltPotGlobalLabels = false;
 			m_bPerformanceOverviewEditActive = false;
+			m_nPerformanceOverviewHoldRemainingMS = 0;
 			return true;
 		}
 		m_bPerformanceOverviewShowTGParameter = true;
@@ -887,6 +896,7 @@ bool CUIMenu::HandlePerformanceOverviewShortcut (TMenuEvent Event)
 		m_bPerformanceOverviewNoteShiftFine =
 			m_pMiniDexed->GetAltPotBank () == CMiniDexed::AltPotBankNoteShift;
 		m_bPerformanceOverviewEditActive = false;
+		m_nPerformanceOverviewHoldRemainingMS = 0;
 		return true;
 	}
 
@@ -894,36 +904,42 @@ bool CUIMenu::HandlePerformanceOverviewShortcut (TMenuEvent Event)
 		m_bPerformanceOverviewShowTGParameter = true;
 		m_nPerformanceOverviewTGParameter = CMiniDexed::TGParameterCutoff;
 		m_bPerformanceOverviewNoteShiftFine = false;
+		m_nPerformanceOverviewHoldRemainingMS = 0;
 		return true;
 
 	case MenuEventTGResonance:
 		m_bPerformanceOverviewShowTGParameter = true;
 		m_nPerformanceOverviewTGParameter = CMiniDexed::TGParameterResonance;
 		m_bPerformanceOverviewNoteShiftFine = false;
+		m_nPerformanceOverviewHoldRemainingMS = 0;
 		return true;
 
 	case MenuEventTGPitchBend:
 		m_bPerformanceOverviewShowTGParameter = true;
 		m_nPerformanceOverviewTGParameter = CMiniDexed::TGParameterPitchBendRange;
 		m_bPerformanceOverviewNoteShiftFine = false;
+		m_nPerformanceOverviewHoldRemainingMS = 0;
 		return true;
 
 	case MenuEventTGPortamento:
 		m_bPerformanceOverviewShowTGParameter = true;
 		m_nPerformanceOverviewTGParameter = CMiniDexed::TGParameterPortamentoTime;
 		m_bPerformanceOverviewNoteShiftFine = false;
+		m_nPerformanceOverviewHoldRemainingMS = 0;
 		return true;
 
 	case MenuEventTGPolyMono:
 		m_bPerformanceOverviewShowTGParameter = true;
 		m_nPerformanceOverviewTGParameter = CMiniDexed::TGParameterMonoMode;
 		m_bPerformanceOverviewNoteShiftFine = false;
+		m_nPerformanceOverviewHoldRemainingMS = 0;
 		return true;
 
 	case MenuEventTGChannel:
 		m_bPerformanceOverviewShowTGParameter = true;
 		m_nPerformanceOverviewTGParameter = CMiniDexed::TGParameterMIDIChannel;
 		m_bPerformanceOverviewNoteShiftFine = false;
+		m_nPerformanceOverviewHoldRemainingMS = 0;
 		return true;
 
 	default:
@@ -1183,21 +1199,34 @@ void CUIMenu::DisplayAltPotGlobalLabels (void)
 
 void CUIMenu::ArmPerformanceOverviewTimer (unsigned nDelayMS, bool bShowOverviewNext, bool bResetParameterHold)
 {
-	// When Performance page 2 is showing a TG parameter (Volume, Pan,
-	// Octave/NoteShift, etc.), keep it visible and refresh it quickly, but only
-	// for a bounded hold time.  Any new edit/moving controller resets the hold
-	// to 4 seconds.  When the hold expires the normal Performance page 1 / page 2
-	// sequence resumes.
+	// Voice overview keeps the normal Performance page 1 / page 2 sequence.
+	// When a TG parameter overview is selected (Volume, Pan, Detune, Octave,
+	// Cutoff, etc.), page 2 becomes a pinned monitor: it stays there until the
+	// user explicitly selects Voice again.  This gives enough time to read and
+	// compare all 8 TG values.
 	if ((m_bPerformanceOverviewShowTGParameter || m_bPerformanceOverviewAltPotGlobalLabels)
 		&& nDelayMS >= 4000 && !bShowOverviewNext)
 	{
-		if (bResetParameterHold || m_nPerformanceOverviewHoldRemainingMS == 0)
+		// Global AltPot page 2B still uses a short timed transition: first show
+		// values, then show the global control labels.  When that transition
+		// completes, stay pinned on page 2B instead of returning to page 1.
+		if (m_bPerformanceOverviewAltPotGlobalLabels && m_nPerformanceOverviewHoldRemainingMS > 0)
 		{
-			m_nPerformanceOverviewHoldRemainingMS = nDelayMS;
+			nDelayMS = 150;
+			bShowOverviewNext = true;
 		}
+		else
+		{
+			if (bResetParameterHold)
+			{
+				m_nPerformanceOverviewHoldRemainingMS = 0;
+			}
 
-		nDelayMS = 150;
-		bShowOverviewNext = true;
+			// Cancel any pending automatic page flip and leave page 2 displayed.
+			m_nPerformanceOverviewSequence++;
+			m_bPerformanceOverviewPage = true;
+			return;
+		}
 	}
 	else if (bResetParameterHold)
 	{
@@ -1242,11 +1271,22 @@ void CUIMenu::PerformanceOverviewTimerHandler (TKernelTimerHandle hTimer, void *
 			else
 			{
 				pThis->m_nPerformanceOverviewHoldRemainingMS = 0;
-				pThis->m_bPerformanceOverviewAltPotGlobalLabels = false;
-				pThis->m_bPerformanceOverviewSuppressArm = true;
-				pThis->EventHandler (MenuEventUpdate);
-				pThis->m_bPerformanceOverviewSuppressArm = false;
-				pThis->ArmPerformanceOverviewTimer (2000, true);
+				if (pThis->m_bPerformanceOverviewShowTGParameter ||
+				    pThis->m_bPerformanceOverviewAltPotGlobalLabels)
+				{
+					// Parameter pages are pinned.  Keep page 2/page 2B visible
+					// after the optional global-label transition; do not resume
+					// the page 1 / page 2 sequence until Voice is selected.
+					pThis->DisplayPerformanceTGOverview ();
+					pThis->ArmPerformanceOverviewTimer (4000, false);
+				}
+				else
+				{
+					pThis->m_bPerformanceOverviewSuppressArm = true;
+					pThis->EventHandler (MenuEventUpdate);
+					pThis->m_bPerformanceOverviewSuppressArm = false;
+					pThis->ArmPerformanceOverviewTimer (2000, true);
+				}
 			}
 		}
 		else
@@ -2776,7 +2816,9 @@ void CUIMenu::SysExDisplayTimerHandler (TKernelTimerHandle hTimer, void *pParam,
 	}
 
 	pThis->m_bSysExDisplayActive = false;
-	if (pThis->IsPerformanceMenuActive () && pThis->m_bPerformanceOverviewShowTGParameter)
+	if (pThis->IsPerformanceMenuActive () &&
+	    (pThis->m_bPerformanceOverviewShowTGParameter ||
+	     pThis->m_bPerformanceOverviewAltPotGlobalLabels))
 	{
 		pThis->DisplayPerformanceTGOverview ();
 		pThis->ArmPerformanceOverviewTimer (4000, false);
