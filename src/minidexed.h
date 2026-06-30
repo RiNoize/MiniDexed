@@ -168,6 +168,9 @@ public:
 		FilterTypeTelephone,
 		FilterTypeHollowNotch,
 		FilterTypeCombMetal,
+		FilterTypeStepLP,
+		FilterTypeStepBP,
+		FilterTypeStepMetal,
 		FilterTypeUnknown
 	};
 
@@ -354,6 +357,8 @@ private:
 	int m_nCutoff[CConfig::AllToneGenerators];
 	int m_nResonance[CConfig::AllToneGenerators];
 	unsigned m_nFilterType[CConfig::AllToneGenerators];
+	float32_t m_FilterCutoffSmooth[CConfig::AllToneGenerators];
+	float32_t m_FilterResonanceSmooth[CConfig::AllToneGenerators];
 	float32_t m_FilterState[CConfig::AllToneGenerators][4];
 	static const unsigned FilterCombBufferSize = 64;
 	float32_t m_FilterCombBuffer[CConfig::AllToneGenerators][FilterCombBufferSize];

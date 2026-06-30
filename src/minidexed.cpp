@@ -99,6 +99,8 @@ CMiniDexed::CMiniDexed (CConfig *pConfig, CInterruptSystem *pInterrupt,
 		m_nCutoff[i] = 99;
 		m_nResonance[i] = 0;
 		m_nFilterType[i] = FilterTypeClassic;
+		m_FilterCutoffSmooth[i] = 0.985f;
+		m_FilterResonanceSmooth[i] = 0.0f;
 		ResetTGFilterState (i);
 		m_nMIDIChannel[i] = CMIDIDevice::Disabled;
 		m_nPitchBendRange[i] = 2;
@@ -785,6 +787,47 @@ static float32_t MiniDexedSoftClip (float32_t x)
 	return x * (27.0f + x * x) / (27.0f + 9.0f * x * x);
 }
 
+static float32_t MiniDexedFilterCutoffTarget (int nCutoff)
+{
+	// Do not ever reach exactly 1.0.  In the original Dexed filter path,
+	// cutoff == 1.0 can behave like a hard bypass, which makes the last
+	// step (98 -> 99) sound much larger than the rest of the sweep.
+	float32_t target = (float32_t) (nCutoff + 1) / 101.0f;
+	if (target > 0.985f)
+	{
+		target = 0.985f;
+	}
+	if (target < 0.001f)
+	{
+		target = 0.001f;
+	}
+	return target;
+}
+
+static float32_t MiniDexedStepCutoffTarget (int nCutoff)
+{
+	// Quantized by ear for musical stepped sweeps.  These are not linear
+	// controller steps: they spend more resolution in the low/mid range and
+	// keep the top just below the hard-open/bypass area.
+	static const float32_t Steps[] =
+	{
+		0.018f, 0.026f, 0.038f, 0.054f,
+		0.075f, 0.103f, 0.140f, 0.188f,
+		0.250f, 0.328f, 0.425f, 0.540f,
+		0.665f, 0.785f, 0.895f, 0.975f
+	};
+
+	unsigned nStep = (unsigned) constrain ((nCutoff * 16) / 100, 0, 15);
+	return Steps[nStep];
+}
+
+static bool MiniDexedFilterIsStepType (unsigned nType)
+{
+	return nType == CMiniDexed::FilterTypeStepLP
+	    || nType == CMiniDexed::FilterTypeStepBP
+	    || nType == CMiniDexed::FilterTypeStepMetal;
+}
+
 void CMiniDexed::ResetTGFilterState (unsigned nTG)
 {
 	if (nTG >= CConfig::AllToneGenerators)
@@ -801,6 +844,8 @@ void CMiniDexed::ResetTGFilterState (unsigned nTG)
 		m_FilterCombBuffer[nTG][i] = 0.0f;
 	}
 	m_FilterCombIndex[nTG] = 0;
+	m_FilterCutoffSmooth[nTG] = MiniDexedFilterCutoffTarget (m_nCutoff[nTG]);
+	m_FilterResonanceSmooth[nTG] = (float32_t) m_nResonance[nTG] / 99.0f;
 }
 
 void CMiniDexed::ApplyDexedFilterSettings (unsigned nTG)
@@ -814,8 +859,8 @@ void CMiniDexed::ApplyDexedFilterSettings (unsigned nTG)
 	assert (m_pTG[nTG]);
 	if (m_nFilterType[nTG] == FilterTypeClassic)
 	{
-		m_pTG[nTG]->setFilterCutoff (mapfloat (m_nCutoff[nTG], 0, 99, 0.0f, 1.0f));
-		m_pTG[nTG]->setFilterResonance (mapfloat (m_nResonance[nTG], 0, 99, 0.0f, 1.0f));
+		m_pTG[nTG]->setFilterCutoff (MiniDexedFilterCutoffTarget (m_nCutoff[nTG]));
+		m_pTG[nTG]->setFilterResonance (mapfloat (m_nResonance[nTG], 0, 99, 0.0f, 0.985f));
 	}
 	else
 	{
@@ -865,8 +910,18 @@ void CMiniDexed::ApplyTGFilter (unsigned nTG, float32_t *pBuffer, unsigned nFram
 		return;
 	}
 
-	float32_t cutoff = (float32_t) (m_nCutoff[nTG] + 1) / 100.0f;
-	float32_t resonance = (float32_t) m_nResonance[nTG] / 99.0f;
+	// Smooth the controller values a little to reduce zipper noise from 0..99
+	// MIDI/encoder steps.  Step filters quantize the target first, then glide
+	// very quickly to the new step: musical stair-steps, but no digital crack.
+	float32_t targetCutoff = MiniDexedFilterIsStepType (nType)
+					? MiniDexedStepCutoffTarget (m_nCutoff[nTG])
+					: MiniDexedFilterCutoffTarget (m_nCutoff[nTG]);
+	float32_t targetResonance = (float32_t) m_nResonance[nTG] / 99.0f;
+	float32_t smoothAmount = MiniDexedFilterIsStepType (nType) ? 0.55f : 0.35f;
+	m_FilterCutoffSmooth[nTG] += (targetCutoff - m_FilterCutoffSmooth[nTG]) * smoothAmount;
+	m_FilterResonanceSmooth[nTG] += (targetResonance - m_FilterResonanceSmooth[nTG]) * 0.35f;
+	float32_t cutoff = m_FilterCutoffSmooth[nTG];
+	float32_t resonance = m_FilterResonanceSmooth[nTG];
 
 	// Control law chosen by ear rather than by textbook accuracy: useful range,
 	// stable at high resonance, and light enough for 8 TGs on small Raspberry Pis.
@@ -901,6 +956,29 @@ void CMiniDexed::ApplyTGFilter (unsigned nTG, float32_t *pBuffer, unsigned nFram
 			z[2] += a * (z[1] - z[2]);
 			z[3] += a * (z[2] - z[3]);
 			pBuffer[i] = MiniDexedSoftClip (z[3] * (1.0f + resonance * 1.5f));
+		}
+		break;
+
+	case FilterTypeStepLP:
+		for (unsigned i = 0; i < nFrames; i++)
+		{
+			float32_t input = MiniDexedSoftClip (pBuffer[i] * (1.0f + resonance * 0.9f));
+			z[0] += a * (input - z[0]);
+			z[1] += a * (z[0] - z[1]);
+			z[2] += a * (z[1] - z[2]);
+			pBuffer[i] = MiniDexedSoftClip (z[2] * (1.0f + resonance * 1.1f));
+		}
+		break;
+
+	case FilterTypeStepBP:
+		for (unsigned i = 0; i < nFrames; i++)
+		{
+			float32_t input = pBuffer[i];
+			float32_t hp = input - z[0] - z[1] * (0.35f + (1.0f - resonance) * 1.2f);
+			z[1] += a * hp;
+			z[0] += a * z[1];
+			float32_t bp = z[1] * (1.4f + resonance * 4.0f);
+			pBuffer[i] = MiniDexedSoftClip (bp);
 		}
 		break;
 
@@ -941,16 +1019,31 @@ void CMiniDexed::ApplyTGFilter (unsigned nTG, float32_t *pBuffer, unsigned nFram
 		break;
 
 	case FilterTypeCombMetal:
+	case FilterTypeStepMetal:
 		{
-			unsigned nDelay = 2 + (99 - (unsigned) m_nCutoff[nTG]) * (FilterCombBufferSize - 3) / 99;
-			float32_t feedback = resonance * 0.82f;
+			float32_t delay = 2.0f + (1.0f - cutoff) * (float32_t) (FilterCombBufferSize - 3);
+			unsigned nDelayA = (unsigned) delay;
+			if (nDelayA < 2)
+			{
+				nDelayA = 2;
+			}
+			if (nDelayA >= FilterCombBufferSize - 1)
+			{
+				nDelayA = FilterCombBufferSize - 2;
+			}
+			unsigned nDelayB = nDelayA + 1;
+			float32_t frac = delay - (float32_t) nDelayA;
+			float32_t feedback = resonance * (nType == FilterTypeStepMetal ? 0.90f : 0.82f);
 			unsigned nIndex = m_FilterCombIndex[nTG];
 			for (unsigned i = 0; i < nFrames; i++)
 			{
-				unsigned nRead = (nIndex + FilterCombBufferSize - nDelay) % FilterCombBufferSize;
-				float32_t delayed = m_FilterCombBuffer[nTG][nRead];
+				unsigned nReadA = (nIndex + FilterCombBufferSize - nDelayA) % FilterCombBufferSize;
+				unsigned nReadB = (nIndex + FilterCombBufferSize - nDelayB) % FilterCombBufferSize;
+				float32_t delayed = m_FilterCombBuffer[nTG][nReadA] * (1.0f - frac)
+							 + m_FilterCombBuffer[nTG][nReadB] * frac;
 				float32_t input = pBuffer[i];
-				float32_t y = MiniDexedSoftClip (input * 0.65f + delayed * (0.55f + resonance * 0.35f));
+				float32_t y = MiniDexedSoftClip (input * (nType == FilterTypeStepMetal ? 0.55f : 0.65f)
+									 + delayed * (0.55f + resonance * (nType == FilterTypeStepMetal ? 0.48f : 0.35f)));
 				m_FilterCombBuffer[nTG][nIndex] = MiniDexedSoftClip (input + delayed * feedback);
 				nIndex = (nIndex + 1) % FilterCombBufferSize;
 				pBuffer[i] = y;

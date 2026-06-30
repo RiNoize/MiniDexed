@@ -1166,6 +1166,9 @@ std::string CUIMenu::FormatOverviewTGParameterValue (unsigned nTGParameter, int 
 		case CMiniDexed::FilterTypeTelephone:	return "TEL";
 		case CMiniDexed::FilterTypeHollowNotch:	return "HOL";
 		case CMiniDexed::FilterTypeCombMetal:	return "CMB";
+		case CMiniDexed::FilterTypeStepLP:	return "SLP";
+		case CMiniDexed::FilterTypeStepBP:	return "SBP";
+		case CMiniDexed::FilterTypeStepMetal:	return "SMT";
 		default:				return "???";
 		}
 
@@ -2280,6 +2283,9 @@ string CUIMenu::ToFilterType (int nValue)
 	case CMiniDexed::FilterTypeTelephone:	return "Telephone";
 	case CMiniDexed::FilterTypeHollowNotch:	return "Hollow";
 	case CMiniDexed::FilterTypeCombMetal:	return "Comb Metal";
+	case CMiniDexed::FilterTypeStepLP:	return "Step LP";
+	case CMiniDexed::FilterTypeStepBP:	return "Step BP";
+	case CMiniDexed::FilterTypeStepMetal:	return "Step Metal";
 	default:				return "?";
 	}
 }
