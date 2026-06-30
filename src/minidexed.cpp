@@ -82,6 +82,8 @@ CMiniDexed::CMiniDexed (CConfig *pConfig, CInterruptSystem *pInterrupt,
 	m_nToneGenerators = m_pConfig->GetToneGenerators();
 	m_AltPotBank = AltPotBankOctave;
 	m_AltPotMode = AltPotModeIndividual;
+	m_bTGSoloEnabled = false;
+	m_nTGSoloTG = 0;
 	m_nPolyphony = m_pConfig->GetPolyphony();
 	LOGNOTE("Tone Generators=%d, Polyphony=%d", m_nToneGenerators, m_nPolyphony);
 
@@ -1465,6 +1467,57 @@ int CMiniDexed::GetTGParameter (TTGParameter Parameter, unsigned nTG)
 	}
 }
 
+
+void CMiniDexed::SetTGSoloTG (unsigned nTG)
+{
+	if (nTG >= m_nToneGenerators)
+	{
+		return;
+	}
+
+	if (m_nTGSoloTG != nTG)
+	{
+		unsigned nOldTG = m_nTGSoloTG;
+		m_nTGSoloTG = nTG;
+
+		if (m_bTGSoloEnabled && nOldTG < m_nToneGenerators)
+		{
+			notesOff (0, nOldTG);
+		}
+	}
+}
+
+unsigned CMiniDexed::GetTGSoloTG (void) const
+{
+	return m_nTGSoloTG;
+}
+
+void CMiniDexed::ToggleTGSolo (void)
+{
+	m_bTGSoloEnabled = !m_bTGSoloEnabled;
+
+	if (m_bTGSoloEnabled)
+	{
+		for (unsigned nTG = 0; nTG < m_nToneGenerators; nTG++)
+		{
+			if (nTG != m_nTGSoloTG)
+			{
+				notesOff (0, nTG);
+			}
+		}
+	}
+}
+
+bool CMiniDexed::IsTGSoloEnabled (void) const
+{
+	return m_bTGSoloEnabled;
+}
+
+bool CMiniDexed::IsTGSoloActiveForTG (unsigned nTG) const
+{
+	return !m_bTGSoloEnabled || nTG == m_nTGSoloTG;
+}
+
 void CMiniDexed::SetVoiceParameter (uint8_t uchOffset, uint8_t uchValue, unsigned nOP, unsigned nTG)
 {
 	assert (nTG < CConfig::AllToneGenerators);
@@ -2329,6 +2382,9 @@ void CMiniDexed::LoadPerformanceParameters(void)
 		SetParameter (ParameterReverbLowPass, m_PerformanceConfig.GetReverbLowPass ());
 		SetParameter (ParameterReverbDiffusion, m_PerformanceConfig.GetReverbDiffusion ());
 		SetParameter (ParameterReverbLevel, m_PerformanceConfig.GetReverbLevel ());
+
+		m_bTGSoloEnabled = false;
+		m_nTGSoloTG = 0;
 
 		m_UI.DisplayChanged ();
 }

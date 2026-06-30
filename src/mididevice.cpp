@@ -507,6 +507,10 @@ void CMIDIDevice::MIDIMessageHandler (const u8 *pMessage, size_t nLength, unsign
 						{
 							break;
 						}
+						if (!m_pSynthesizer->IsTGSoloActiveForTG (nTG))
+						{
+							break;
+						}
 		
 						if (pMessage[2] > 0)
 						{
@@ -524,6 +528,10 @@ void CMIDIDevice::MIDIMessageHandler (const u8 *pMessage, size_t nLength, unsign
 		
 					case MIDI_NOTE_OFF:
 						if (nLength < 3)
+						{
+							break;
+						}
+						if (!m_pSynthesizer->IsTGSoloActiveForTG (nTG))
 						{
 							break;
 						}

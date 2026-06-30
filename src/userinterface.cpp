@@ -504,6 +504,10 @@ void CUserInterface::UIButtonsEventHandler (CUIButton::BtnEvent Event)
 		m_Menu.EventHandler (CUIMenu::MenuEventTGEditVoice);
 		break;
 
+	case CUIButton::BtnEventTGSolo:
+		m_Menu.EventHandler (CUIMenu::MenuEventTGSolo);
+		break;
+
 	case CUIButton::BtnEventAltPot:
 		m_Menu.EventHandler (CUIMenu::MenuEventAltPot);
 		break;

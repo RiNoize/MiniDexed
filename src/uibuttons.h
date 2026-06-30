@@ -28,7 +28,7 @@
 #define BUTTONS_UPDATE_NUM_TICKS 100
 #define DEBOUNCE_TIME 20
 #define MAX_GPIO_BUTTONS 11  // 5 UI buttons, 6 Program/Bank/TG Select buttons
-#define MAX_MIDI_BUTTONS 41
+#define MAX_MIDI_BUTTONS 42
 #define MAX_BUTTONS (MAX_GPIO_BUTTONS+MAX_MIDI_BUTTONS)
 
 class CUIButtons;
@@ -84,11 +84,12 @@ public:
 		BtnEventTGModulation = 35,
 		BtnEventTGChannel = 36,
 		BtnEventTGEditVoice = 37,
-		BtnEventAltPot = 38,
-		BtnEventAltPotPrev = 39,
-		BtnEventAltPotNext = 40,
-		BtnEventAltPotMode = 41,
-		BtnEventUnknown = 42
+		BtnEventTGSolo = 38,
+		BtnEventAltPot = 39,
+		BtnEventAltPotPrev = 40,
+		BtnEventAltPotNext = 41,
+		BtnEventAltPotMode = 42,
+		BtnEventUnknown = 43
 	};
 	
 	CUIButton (void);
@@ -233,6 +234,7 @@ private:
 	unsigned m_TGModulationMidi;
 	unsigned m_TGChannelMidi;
 	unsigned m_TGEditVoiceMidi;
+	unsigned m_TGSoloMidi;
 	unsigned m_AltPotMidi;
 	unsigned m_AltPotPrevMidi;
 	unsigned m_AltPotNextMidi;

@@ -267,6 +267,12 @@ public:
 	int SetAltPotValue (unsigned nValue, unsigned nTG);
 	int SetAltPotGlobalValue (unsigned nValue, unsigned nControl);
 
+	void SetTGSoloTG (unsigned nTG);
+	unsigned GetTGSoloTG (void) const;
+	void ToggleTGSolo (void);
+	bool IsTGSoloEnabled (void) const;
+	bool IsTGSoloActiveForTG (unsigned nTG) const;
+
 	// access (global or OP-related) parameter of the active voice of a TG
 	static const unsigned NoOP = 6;		// for global parameters
 	void SetVoiceParameter (uint8_t uchOffset, uint8_t uchValue, unsigned nOP, unsigned nTG);
@@ -309,6 +315,8 @@ private:
 	unsigned m_nToneGenerators;
 	TAltPotBank m_AltPotBank;
 	TAltPotMode m_AltPotMode;
+	bool m_bTGSoloEnabled;
+	unsigned m_nTGSoloTG;
 	unsigned m_nPolyphony;
 
 	CDexedAdapter *m_pTG[CConfig::AllToneGenerators];

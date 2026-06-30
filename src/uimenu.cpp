@@ -640,6 +640,15 @@ void CUIMenu::EventHandler (TMenuEvent Event)
 		DisplayMIDIButtonOverlay ("TG Function", "Edit Voice", 1000);
 		break;
 
+	case MenuEventTGSolo:
+		m_pMiniDexed->ToggleTGSolo ();
+		{
+			std::string Value = m_pMiniDexed->IsTGSoloEnabled () ?
+				("TG" + std::to_string (m_pMiniDexed->GetTGSoloTG () + 1) + " ON") : "OFF";
+			DisplayMIDIButtonOverlay ("Solo Edit", Value.c_str (), 1000);
+		}
+		break;
+
 	case MenuEventAltPot:
 		if (IsPerformanceMenuActive ())
 		{
@@ -795,6 +804,7 @@ const char *CUIMenu::GetMIDIButtonFunctionName (TMenuEvent Event)
 	case MenuEventTGModulation:	return "Modulation";
 	case MenuEventTGChannel:	return "Channel";
 	case MenuEventTGEditVoice:	return "Edit Voice";
+	case MenuEventTGSolo:		return "Solo Edit";
 	case MenuEventAltPot:		return "Alt Knobs";
 	case MenuEventAltPotMode:	return "AltPot Mode";
 	default:			return 0;
@@ -984,6 +994,7 @@ bool CUIMenu::HandlePerformanceOverviewTGSelect (TMenuEvent Event)
 	}
 
 	m_nPerformanceOverviewEditTG = nTG;
+	m_pMiniDexed->SetTGSoloTG (nTG);
 	m_bPerformanceOverviewEditActive = true;
 	return true;
 }
@@ -1546,6 +1557,12 @@ void CUIMenu::MenuHandler (CUIMenu *pUIMenu, TMenuEvent Event)
 			pUIMenu->m_pCurrentMenu[pUIMenu->m_nCurrentSelection].MenuItem;
 		pUIMenu->m_nCurrentMenuItem = pUIMenu->m_nCurrentSelection;
 		pUIMenu->m_nCurrentSelection = 0;
+		if (pUIMenu->m_MenuStackMenu[pUIMenu->m_nCurrentMenuDepth-1] == s_MainMenu &&
+		    pUIMenu->m_pCurrentMenu == s_TGMenu &&
+		    pUIMenu->m_nMenuStackSelection[pUIMenu->m_nCurrentMenuDepth-1] < pUIMenu->m_nToneGenerators)
+		{
+			pUIMenu->m_pMiniDexed->SetTGSoloTG (pUIMenu->m_nMenuStackSelection[pUIMenu->m_nCurrentMenuDepth-1]);
+		}
 		break;
 
 	case MenuEventStepDown:
@@ -2616,6 +2633,8 @@ void CUIMenu::TGSelectHandler (unsigned nTG)
 		return;
 	}
 
+	m_pMiniDexed->SetTGSoloTG (nTG);
+
 	// If we are already inside a TG branch below the TG menu itself, keep the
 	// exact depth of the current UI position. This preserves not only the TG
 	// sub-function (Cutoff, Detune, Volume, etc.) but also whether the user is
@@ -2728,6 +2747,8 @@ void CUIMenu::TGMenuSelectHandler (const char *pName)
 	{
 		nTG = 0;
 	}
+
+	m_pMiniDexed->SetTGSoloTG (nTG);
 
 	m_pParentMenu = s_MainMenu;
 	m_pCurrentMenu = s_TGMenu;

@@ -79,6 +79,7 @@ public:
 		MenuEventTGModulation,
 		MenuEventTGChannel,
 		MenuEventTGEditVoice,
+		MenuEventTGSolo,
 		MenuEventAltPot,
 		MenuEventAltPotPrev,
 		MenuEventAltPotNext,
