@@ -87,6 +87,7 @@ const CUIMenu::TMenuItem CUIMenu::s_TGMenu[] =
 	{"Key High",	EditTGParameter,	0,	CMiniDexed::TGParameterNoteLimitHigh},
 	{"Cutoff",	EditTGParameter,	0,	CMiniDexed::TGParameterCutoff},
 	{"Resonance",	EditTGParameter,	0,	CMiniDexed::TGParameterResonance},
+	{"Filter Type",	EditTGParameter,	0,	CMiniDexed::TGParameterFilterType},
 	{"Pitch Bend",	MenuHandler,		s_EditPitchBendMenu},
 	{"Portamento",		MenuHandler,		s_EditPortamentoMenu},
 	{"Poly/Mono",		EditTGParameter,	0,	CMiniDexed::TGParameterMonoMode}, 
@@ -251,6 +252,7 @@ const CUIMenu::TParameter CUIMenu::s_TGParameter[CMiniDexed::TGParameterUnknown]
 	{0,	127,					1},			// TGParameterNoteLimitHigh
 	{0,	99,					1},			// TGParameterCutoff
 	{0,	99,					1},			// TGParameterResonance
+	{0,	CMiniDexed::FilterTypeUnknown-1,	1, ToFilterType},	// TGParameterFilterType
 	{0,	CMIDIDevice::ChannelUnknown-1,		1, ToMIDIChannel}, 	// TGParameterMIDIChannel
 	{0, 99, 1},								// TGParameterReverbSend
 	{0,	12,					1},			// TGParameterPitchBendRange
@@ -1152,6 +1154,20 @@ std::string CUIMenu::FormatOverviewTGParameterValue (unsigned nTGParameter, int 
 
 	case CMiniDexed::TGParameterMonoMode:
 		return nValue ? "MON" : "POL";
+
+	case CMiniDexed::TGParameterFilterType:
+		switch (nValue)
+		{
+		case CMiniDexed::FilterTypeClassic:	return "CLA";
+		case CMiniDexed::FilterTypeOff:		return "OFF";
+		case CMiniDexed::FilterTypeDirtyLP:	return "DLP";
+		case CMiniDexed::FilterTypeAcidLP:	return "ALP";
+		case CMiniDexed::FilterTypeNasalBP:	return "NBP";
+		case CMiniDexed::FilterTypeTelephone:	return "TEL";
+		case CMiniDexed::FilterTypeHollowNotch:	return "HOL";
+		case CMiniDexed::FilterTypeCombMetal:	return "CMB";
+		default:				return "???";
+		}
 
 	default:
 		break;
@@ -2250,6 +2266,22 @@ string CUIMenu::ToOctave (int nValue)
 		return to_string (nOct) + " oct";
 	}
 	return "0";
+}
+
+string CUIMenu::ToFilterType (int nValue)
+{
+	switch (nValue)
+	{
+	case CMiniDexed::FilterTypeClassic:	return "Classic";
+	case CMiniDexed::FilterTypeOff:		return "Off";
+	case CMiniDexed::FilterTypeDirtyLP:	return "Dirty LP";
+	case CMiniDexed::FilterTypeAcidLP:	return "Acid LP";
+	case CMiniDexed::FilterTypeNasalBP:	return "Nasal BP";
+	case CMiniDexed::FilterTypeTelephone:	return "Telephone";
+	case CMiniDexed::FilterTypeHollowNotch:	return "Hollow";
+	case CMiniDexed::FilterTypeCombMetal:	return "Comb Metal";
+	default:				return "?";
+	}
 }
 
 string CUIMenu::ToMIDIChannel (int nValue)

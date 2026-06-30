@@ -51,6 +51,7 @@ public:
 	int GetDetune (unsigned nTG) const;			// -99 .. 99
 	unsigned GetCutoff (unsigned nTG) const;		// 0 .. 99
 	unsigned GetResonance (unsigned nTG) const;		// 0 .. 99
+	unsigned GetFilterType (unsigned nTG) const;		// 0 .. 7
 	unsigned GetNoteLimitLow (unsigned nTG) const;		// 0 .. 127
 	unsigned GetNoteLimitHigh (unsigned nTG) const;		// 0 .. 127
 	int GetNoteShift (unsigned nTG) const;			// -24 .. 24
@@ -79,6 +80,7 @@ public:
 	void SetDetune (int nValue, unsigned nTG);
 	void SetCutoff (unsigned nValue, unsigned nTG);
 	void SetResonance (unsigned nValue, unsigned nTG);
+	void SetFilterType (unsigned nValue, unsigned nTG);
 	void SetNoteLimitLow (unsigned nValue, unsigned nTG);
 	void SetNoteLimitHigh (unsigned nValue, unsigned nTG);
 	void SetNoteShift (int nValue, unsigned nTG);
@@ -162,6 +164,7 @@ private:
 	int m_nDetune[CConfig::AllToneGenerators];
 	unsigned m_nCutoff[CConfig::AllToneGenerators];
 	unsigned m_nResonance[CConfig::AllToneGenerators];
+	unsigned m_nFilterType[CConfig::AllToneGenerators];
 	unsigned m_nNoteLimitLow[CConfig::AllToneGenerators];
 	unsigned m_nNoteLimitHigh[CConfig::AllToneGenerators];
 	int m_nNoteShift[CConfig::AllToneGenerators];

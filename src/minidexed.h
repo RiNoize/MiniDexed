@@ -86,6 +86,8 @@ public:
 	void SetMasterTune (int nMasterTune, unsigned nTG);		// -99 .. 99
 	void SetCutoff (int nCutoff, unsigned nTG);			// 0 .. 99
 	void SetResonance (int nResonance, unsigned nTG);		// 0 .. 99
+	void SetFilterType (unsigned nFilterType, unsigned nTG);	// 0 .. FilterTypeUnknown-1
+	unsigned GetFilterType (unsigned nTG) const;
 	void SetMIDIChannel (uint8_t uchChannel, unsigned nTG);
 
 	void keyup (int16_t pitch, unsigned nTG);
@@ -156,6 +158,19 @@ public:
 	bool IsValidPerformance(unsigned nID);
 	bool IsValidPerformanceBank(unsigned nBankID);
 
+	enum TFilterType
+	{
+		FilterTypeClassic,
+		FilterTypeOff,
+		FilterTypeDirtyLP,
+		FilterTypeAcidLP,
+		FilterTypeNasalBP,
+		FilterTypeTelephone,
+		FilterTypeHollowNotch,
+		FilterTypeCombMetal,
+		FilterTypeUnknown
+	};
+
 	// Must match the order in CUIMenu::TParameter
 	enum TAltPotBank
 	{
@@ -219,6 +234,7 @@ public:
 		TGParameterNoteLimitHigh,
 		TGParameterCutoff,
 		TGParameterResonance,
+		TGParameterFilterType,
 		TGParameterMIDIChannel,
 		TGParameterReverbSend,
 		TGParameterPitchBendRange, 
@@ -296,6 +312,9 @@ private:
 	uint8_t m_uchOPMask[CConfig::AllToneGenerators];
 	void LoadPerformanceParameters(void); 
 	void ProcessSound (void);
+	void ApplyTGFilter (unsigned nTG, float32_t *pBuffer, unsigned nFrames);
+	void ApplyDexedFilterSettings (unsigned nTG);
+	void ResetTGFilterState (unsigned nTG);
 	const char* GetNetworkDeviceShortName() const;
 
 #ifdef ARM_ALLOW_MULTI_CORE
@@ -334,6 +353,11 @@ private:
 	int m_nMasterTune[CConfig::AllToneGenerators];
 	int m_nCutoff[CConfig::AllToneGenerators];
 	int m_nResonance[CConfig::AllToneGenerators];
+	unsigned m_nFilterType[CConfig::AllToneGenerators];
+	float32_t m_FilterState[CConfig::AllToneGenerators][4];
+	static const unsigned FilterCombBufferSize = 64;
+	float32_t m_FilterCombBuffer[CConfig::AllToneGenerators][FilterCombBufferSize];
+	unsigned m_FilterCombIndex[CConfig::AllToneGenerators];
 	unsigned m_nMIDIChannel[CConfig::AllToneGenerators];
 	unsigned m_nPitchBendRange[CConfig::AllToneGenerators];	
 	unsigned m_nPitchBendStep[CConfig::AllToneGenerators];	

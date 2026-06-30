@@ -152,6 +152,9 @@ bool CPerformanceConfig::Load (void)
 		PropertyName.Format ("Resonance%u", nTG+1);
 		m_nResonance[nTG] = m_Properties.GetNumber (PropertyName, 0);
 
+		PropertyName.Format ("FilterType%u", nTG+1);
+		m_nFilterType[nTG] = m_Properties.GetNumber (PropertyName, 0);
+
 		PropertyName.Format ("NoteLimitLow%u", nTG+1);
 		m_nNoteLimitLow[nTG] = m_Properties.GetNumber (PropertyName, 0);
 
@@ -268,6 +271,9 @@ bool CPerformanceConfig::Save (void)
 
 		PropertyName.Format ("Resonance%u", nTG+1);
 		m_Properties.SetNumber (PropertyName, m_nResonance[nTG]);
+
+		PropertyName.Format ("FilterType%u", nTG+1);
+		m_Properties.SetNumber (PropertyName, m_nFilterType[nTG]);
 
 		PropertyName.Format ("NoteLimitLow%u", nTG+1);
 		m_Properties.SetNumber (PropertyName, m_nNoteLimitLow[nTG]);
@@ -390,6 +396,12 @@ unsigned CPerformanceConfig::GetResonance (unsigned nTG) const
 	return m_nResonance[nTG];
 }
 
+unsigned CPerformanceConfig::GetFilterType (unsigned nTG) const
+{
+	assert (nTG < CConfig::AllToneGenerators);
+	return m_nFilterType[nTG];
+}
+
 unsigned CPerformanceConfig::GetNoteLimitLow (unsigned nTG) const
 {
 	assert (nTG < CConfig::AllToneGenerators);
@@ -460,6 +472,12 @@ void CPerformanceConfig::SetResonance (unsigned nValue, unsigned nTG)
 {
 	assert (nTG < CConfig::AllToneGenerators);
 	m_nResonance[nTG] = nValue;
+}
+
+void CPerformanceConfig::SetFilterType (unsigned nValue, unsigned nTG)
+{
+	assert (nTG < CConfig::AllToneGenerators);
+	m_nFilterType[nTG] = nValue;
 }
 
 void CPerformanceConfig::SetNoteLimitLow (unsigned nValue, unsigned nTG)

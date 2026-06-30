@@ -98,6 +98,8 @@ CMiniDexed::CMiniDexed (CConfig *pConfig, CInterruptSystem *pInterrupt,
 		m_nMasterTune[i] = 0;
 		m_nCutoff[i] = 99;
 		m_nResonance[i] = 0;
+		m_nFilterType[i] = FilterTypeClassic;
+		ResetTGFilterState (i);
 		m_nMIDIChannel[i] = CMIDIDevice::Disabled;
 		m_nPitchBendRange[i] = 2;
 		m_nPitchBendStep[i] = 0;
@@ -767,6 +769,201 @@ void CMiniDexed::SetMasterTune (int nMasterTune, unsigned nTG)
 	m_UI.ParameterChanged ();
 }
 
+
+static float32_t MiniDexedSoftClip (float32_t x)
+{
+	// Cheap soft clip for the "fun" filters.  It adds character without
+	// needing the heavier math library tanh() call on the audio path.
+	if (x > 3.0f)
+	{
+		return 1.0f;
+	}
+	if (x < -3.0f)
+	{
+		return -1.0f;
+	}
+	return x * (27.0f + x * x) / (27.0f + 9.0f * x * x);
+}
+
+void CMiniDexed::ResetTGFilterState (unsigned nTG)
+{
+	if (nTG >= CConfig::AllToneGenerators)
+	{
+		return;
+	}
+
+	for (unsigned i = 0; i < 4; i++)
+	{
+		m_FilterState[nTG][i] = 0.0f;
+	}
+	for (unsigned i = 0; i < FilterCombBufferSize; i++)
+	{
+		m_FilterCombBuffer[nTG][i] = 0.0f;
+	}
+	m_FilterCombIndex[nTG] = 0;
+}
+
+void CMiniDexed::ApplyDexedFilterSettings (unsigned nTG)
+{
+	assert (nTG < CConfig::AllToneGenerators);
+	if (nTG >= m_nToneGenerators)
+	{
+		return;
+	}
+
+	assert (m_pTG[nTG]);
+	if (m_nFilterType[nTG] == FilterTypeClassic)
+	{
+		m_pTG[nTG]->setFilterCutoff (mapfloat (m_nCutoff[nTG], 0, 99, 0.0f, 1.0f));
+		m_pTG[nTG]->setFilterResonance (mapfloat (m_nResonance[nTG], 0, 99, 0.0f, 1.0f));
+	}
+	else
+	{
+		// The new character filters are applied after the Dexed TG output.
+		// Keep Dexed's own simple filter open so the two filters do not stack.
+		m_pTG[nTG]->setFilterCutoff (1.0f);
+		m_pTG[nTG]->setFilterResonance (0.0f);
+	}
+}
+
+void CMiniDexed::SetFilterType (unsigned nFilterType, unsigned nTG)
+{
+	nFilterType = constrain (nFilterType, 0U, (unsigned) FilterTypeUnknown - 1U);
+
+	assert (nTG < CConfig::AllToneGenerators);
+	if (nTG >= m_nToneGenerators)
+	{
+		return;
+	}
+
+	if (m_nFilterType[nTG] != nFilterType)
+	{
+		m_nFilterType[nTG] = nFilterType;
+		ResetTGFilterState (nTG);
+		ApplyDexedFilterSettings (nTG);
+		m_UI.ParameterChanged ();
+	}
+}
+
+unsigned CMiniDexed::GetFilterType (unsigned nTG) const
+{
+	assert (nTG < CConfig::AllToneGenerators);
+	return m_nFilterType[nTG];
+}
+
+void CMiniDexed::ApplyTGFilter (unsigned nTG, float32_t *pBuffer, unsigned nFrames)
+{
+	assert (nTG < CConfig::AllToneGenerators);
+	if (nTG >= m_nToneGenerators || !pBuffer)
+	{
+		return;
+	}
+
+	unsigned nType = m_nFilterType[nTG];
+	if (nType == FilterTypeClassic || nType == FilterTypeOff)
+	{
+		return;
+	}
+
+	float32_t cutoff = (float32_t) (m_nCutoff[nTG] + 1) / 100.0f;
+	float32_t resonance = (float32_t) m_nResonance[nTG] / 99.0f;
+
+	// Control law chosen by ear rather than by textbook accuracy: useful range,
+	// stable at high resonance, and light enough for 8 TGs on small Raspberry Pis.
+	float32_t a = 0.006f + cutoff * cutoff * 0.36f;
+	if (a > 0.42f)
+	{
+		a = 0.42f;
+	}
+
+	float32_t *z = m_FilterState[nTG];
+
+	switch (nType)
+	{
+	case FilterTypeDirtyLP:
+		for (unsigned i = 0; i < nFrames; i++)
+		{
+			float32_t input = pBuffer[i] - z[1] * resonance * 1.15f;
+			input = MiniDexedSoftClip (input * (1.0f + resonance * 1.4f));
+			z[0] += a * (input - z[0]);
+			z[1] += a * (z[0] - z[1]);
+			pBuffer[i] = MiniDexedSoftClip (z[1] * (1.0f + resonance * 0.8f));
+		}
+		break;
+
+	case FilterTypeAcidLP:
+		for (unsigned i = 0; i < nFrames; i++)
+		{
+			float32_t input = pBuffer[i] - z[3] * resonance * 3.2f;
+			input = MiniDexedSoftClip (input * (1.0f + resonance * 2.2f));
+			z[0] += a * (input - z[0]);
+			z[1] += a * (z[0] - z[1]);
+			z[2] += a * (z[1] - z[2]);
+			z[3] += a * (z[2] - z[3]);
+			pBuffer[i] = MiniDexedSoftClip (z[3] * (1.0f + resonance * 1.5f));
+		}
+		break;
+
+	case FilterTypeNasalBP:
+	case FilterTypeHollowNotch:
+		for (unsigned i = 0; i < nFrames; i++)
+		{
+			float32_t input = pBuffer[i];
+			float32_t hp = input - z[0] - z[1] * (0.45f + (1.0f - resonance) * 1.6f);
+			z[1] += a * hp;       // band-pass state
+			z[0] += a * z[1];     // low-pass state
+			float32_t bp = z[1] * (1.0f + resonance * 3.0f);
+			if (nType == FilterTypeNasalBP)
+			{
+				pBuffer[i] = MiniDexedSoftClip (bp);
+			}
+			else
+			{
+				pBuffer[i] = MiniDexedSoftClip ((input - bp * (0.45f + resonance * 0.8f)) * 1.05f);
+			}
+		}
+		break;
+
+	case FilterTypeTelephone:
+		{
+			// Two-stage band limit: first remove lows, then remove highs.
+			float32_t hpA = 0.02f + cutoff * 0.18f;
+			float32_t lpA = 0.025f + cutoff * 0.33f;
+			for (unsigned i = 0; i < nFrames; i++)
+			{
+				float32_t input = pBuffer[i];
+				z[0] += hpA * (input - z[0]);
+				float32_t hp = input - z[0];
+				z[1] += lpA * (hp - z[1]);
+				pBuffer[i] = MiniDexedSoftClip (z[1] * (1.6f + resonance));
+			}
+		}
+		break;
+
+	case FilterTypeCombMetal:
+		{
+			unsigned nDelay = 2 + (99 - (unsigned) m_nCutoff[nTG]) * (FilterCombBufferSize - 3) / 99;
+			float32_t feedback = resonance * 0.82f;
+			unsigned nIndex = m_FilterCombIndex[nTG];
+			for (unsigned i = 0; i < nFrames; i++)
+			{
+				unsigned nRead = (nIndex + FilterCombBufferSize - nDelay) % FilterCombBufferSize;
+				float32_t delayed = m_FilterCombBuffer[nTG][nRead];
+				float32_t input = pBuffer[i];
+				float32_t y = MiniDexedSoftClip (input * 0.65f + delayed * (0.55f + resonance * 0.35f));
+				m_FilterCombBuffer[nTG][nIndex] = MiniDexedSoftClip (input + delayed * feedback);
+				nIndex = (nIndex + 1) % FilterCombBufferSize;
+				pBuffer[i] = y;
+			}
+			m_FilterCombIndex[nTG] = nIndex;
+		}
+		break;
+
+	default:
+		break;
+	}
+}
+
 void CMiniDexed::SetCutoff (int nCutoff, unsigned nTG)
 {
 	nCutoff = constrain (nCutoff, 0, 99);
@@ -775,9 +972,7 @@ void CMiniDexed::SetCutoff (int nCutoff, unsigned nTG)
 	if (nTG >= m_nToneGenerators) return;  // Not an active TG
 
 	m_nCutoff[nTG] = nCutoff;
-
-	assert (m_pTG[nTG]);
-	m_pTG[nTG]->setFilterCutoff (mapfloat (nCutoff, 0, 99, 0.0f, 1.0f));
+	ApplyDexedFilterSettings (nTG);
 
 	m_UI.ParameterChanged ();
 }
@@ -790,9 +985,7 @@ void CMiniDexed::SetResonance (int nResonance, unsigned nTG)
 	if (nTG >= m_nToneGenerators) return;  // Not an active TG
 
 	m_nResonance[nTG] = nResonance;
-
-	assert (m_pTG[nTG]);
-	m_pTG[nTG]->setFilterResonance (mapfloat (nResonance, 0, 99, 0.0f, 1.0f));
+	ApplyDexedFilterSettings (nTG);
 
 	m_UI.ParameterChanged ();
 }
@@ -1114,6 +1307,7 @@ void CMiniDexed::CopyTG (unsigned nFromTG, unsigned nToTG)
 	SetMasterTune (m_nMasterTune[nFromTG], nToTG);
 	SetCutoff (m_nCutoff[nFromTG], nToTG);
 	SetResonance (m_nResonance[nFromTG], nToTG);
+	SetFilterType (m_nFilterType[nFromTG], nToTG);
 	SetReverbSend (m_nReverbSend[nFromTG], nToTG);
 
 	m_nNoteLimitLow[nToTG] = m_nNoteLimitLow[nFromTG];
@@ -1390,6 +1584,7 @@ void CMiniDexed::SetTGParameter (TTGParameter Parameter, int nValue, unsigned nT
 		break;
 	case TGParameterCutoff:		SetCutoff (nValue, nTG);	break;
 	case TGParameterResonance:	SetResonance (nValue, nTG);	break;
+	case TGParameterFilterType:	SetFilterType ((unsigned) nValue, nTG);	break;
 	case TGParameterPitchBendRange:	setPitchbendRange (nValue, nTG);	break;
 	case TGParameterPitchBendStep:	setPitchbendStep (nValue, nTG);	break;
 	case TGParameterPortamentoMode:		setPortamentoMode (nValue, nTG);	break;
@@ -1449,6 +1644,7 @@ int CMiniDexed::GetTGParameter (TTGParameter Parameter, unsigned nTG)
 	case TGParameterNoteLimitHigh:	return m_nNoteLimitHigh[nTG];
 	case TGParameterCutoff:		return m_nCutoff[nTG];
 	case TGParameterResonance:	return m_nResonance[nTG];
+	case TGParameterFilterType:	return m_nFilterType[nTG];
 	case TGParameterMIDIChannel:	return m_nMIDIChannel[nTG];
 	case TGParameterReverbSend:	return m_nReverbSend[nTG];
 	case TGParameterPitchBendRange:	return m_nPitchBendRange[nTG];
@@ -1626,6 +1822,7 @@ void CMiniDexed::ProcessSound (void)
 
 		float32_t SampleBuffer[nFrames];
 		m_pTG[0]->getSamples (SampleBuffer, nFrames);
+		ApplyTGFilter (0, SampleBuffer, nFrames);
 
 		// Convert single float array (mono) to int16 array
 		int32_t tmp_int[nFrames];
@@ -1686,6 +1883,11 @@ void CMiniDexed::ProcessSound (void)
 			{
 				// just wait
 			}
+		}
+
+		for (unsigned i = 0; i < m_nToneGenerators; i++)
+		{
+			ApplyTGFilter (i, m_OutputLevel[i], nFrames);
 		}
 
 		//
@@ -1865,6 +2067,7 @@ bool CMiniDexed::DoSavePerformance (void)
 		m_PerformanceConfig.SetDetune (m_nMasterTune[nTG], nTG);
 		m_PerformanceConfig.SetCutoff (m_nCutoff[nTG], nTG);
 		m_PerformanceConfig.SetResonance (m_nResonance[nTG], nTG);
+		m_PerformanceConfig.SetFilterType (m_nFilterType[nTG], nTG);
 		m_PerformanceConfig.SetPitchBendRange (m_nPitchBendRange[nTG], nTG);
 		m_PerformanceConfig.SetPitchBendStep	(m_nPitchBendStep[nTG], nTG);
 		m_PerformanceConfig.SetPortamentoMode (m_nPortamentoMode[nTG], nTG);
@@ -2360,6 +2563,7 @@ void CMiniDexed::LoadPerformanceParameters(void)
 			SetMasterTune (m_PerformanceConfig.GetDetune (nTG), nTG);
 			SetCutoff (m_PerformanceConfig.GetCutoff (nTG), nTG);
 			SetResonance (m_PerformanceConfig.GetResonance (nTG), nTG);
+			SetFilterType (m_PerformanceConfig.GetFilterType (nTG), nTG);
 			setPitchbendRange (m_PerformanceConfig.GetPitchBendRange (nTG), nTG);
 			setPitchbendStep (m_PerformanceConfig.GetPitchBendStep (nTG), nTG);
 			setPortamentoMode (m_PerformanceConfig.GetPortamentoMode (nTG), nTG);

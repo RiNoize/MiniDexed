@@ -145,6 +145,7 @@ private:
 	static std::string ToVolume (int nValue);
 	static std::string ToPan (int nValue);
 	static std::string ToOctave (int nValue);
+	static std::string ToFilterType (int nValue);
 	static std::string ToMIDIChannel (int nValue);
 
 	static std::string ToAlgorithm (int nValue);
