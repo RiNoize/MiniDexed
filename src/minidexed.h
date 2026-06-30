@@ -215,6 +215,8 @@ public:
 		TGParameterPan,
 		TGParameterMasterTune,
 		TGParameterNoteShift,
+		TGParameterNoteLimitLow,
+		TGParameterNoteLimitHigh,
 		TGParameterCutoff,
 		TGParameterResonance,
 		TGParameterMIDIChannel,

@@ -83,6 +83,8 @@ const CUIMenu::TMenuItem CUIMenu::s_TGMenu[] =
 #endif
 	{"Detune",	EditTGParameter,	0,	CMiniDexed::TGParameterMasterTune},
 	{"Octave",	EditTGParameter,	0,	CMiniDexed::TGParameterNoteShift},
+	{"Key Low",	EditTGParameter,	0,	CMiniDexed::TGParameterNoteLimitLow},
+	{"Key High",	EditTGParameter,	0,	CMiniDexed::TGParameterNoteLimitHigh},
 	{"Cutoff",	EditTGParameter,	0,	CMiniDexed::TGParameterCutoff},
 	{"Resonance",	EditTGParameter,	0,	CMiniDexed::TGParameterResonance},
 	{"Pitch Bend",	MenuHandler,		s_EditPitchBendMenu},
@@ -245,6 +247,8 @@ const CUIMenu::TParameter CUIMenu::s_TGParameter[CMiniDexed::TGParameterUnknown]
 	{0,	127,					8, ToPan},		// TGParameterPan
 	{-99,	99,					1},			// TGParameterMasterTune
 	{-24,	24,					12, ToOctave},		// TGParameterNoteShift
+	{0,	127,					1},			// TGParameterNoteLimitLow
+	{0,	127,					1},			// TGParameterNoteLimitHigh
 	{0,	99,					1},			// TGParameterCutoff
 	{0,	99,					1},			// TGParameterResonance
 	{0,	CMIDIDevice::ChannelUnknown-1,		1, ToMIDIChannel}, 	// TGParameterMIDIChannel

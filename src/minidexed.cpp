@@ -1372,6 +1372,22 @@ void CMiniDexed::SetTGParameter (TTGParameter Parameter, int nValue, unsigned nT
 		m_nNoteShift[nTG] = constrain (nValue, -24, 24);
 		m_UI.ParameterChanged ();
 		break;
+	case TGParameterNoteLimitLow:
+		m_nNoteLimitLow[nTG] = constrain (nValue, 0, 127);
+		if (m_nNoteLimitLow[nTG] > m_nNoteLimitHigh[nTG])
+		{
+			m_nNoteLimitHigh[nTG] = m_nNoteLimitLow[nTG];
+		}
+		m_UI.ParameterChanged ();
+		break;
+	case TGParameterNoteLimitHigh:
+		m_nNoteLimitHigh[nTG] = constrain (nValue, 0, 127);
+		if (m_nNoteLimitHigh[nTG] < m_nNoteLimitLow[nTG])
+		{
+			m_nNoteLimitLow[nTG] = m_nNoteLimitHigh[nTG];
+		}
+		m_UI.ParameterChanged ();
+		break;
 	case TGParameterCutoff:		SetCutoff (nValue, nTG);	break;
 	case TGParameterResonance:	SetResonance (nValue, nTG);	break;
 	case TGParameterPitchBendRange:	setPitchbendRange (nValue, nTG);	break;
@@ -1429,6 +1445,8 @@ int CMiniDexed::GetTGParameter (TTGParameter Parameter, unsigned nTG)
 	case TGParameterPan:		return m_nPan[nTG];
 	case TGParameterMasterTune:	return m_nMasterTune[nTG];
 	case TGParameterNoteShift:	return m_nNoteShift[nTG];
+	case TGParameterNoteLimitLow:	return m_nNoteLimitLow[nTG];
+	case TGParameterNoteLimitHigh:	return m_nNoteLimitHigh[nTG];
 	case TGParameterCutoff:		return m_nCutoff[nTG];
 	case TGParameterResonance:	return m_nResonance[nTG];
 	case TGParameterMIDIChannel:	return m_nMIDIChannel[nTG];
