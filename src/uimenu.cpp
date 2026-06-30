@@ -642,10 +642,27 @@ void CUIMenu::EventHandler (TMenuEvent Event)
 
 	case MenuEventTGSolo:
 		m_pMiniDexed->ToggleTGSolo ();
+		if (m_pMiniDexed->IsTGSoloEnabled ())
 		{
-			std::string Value = m_pMiniDexed->IsTGSoloEnabled () ?
-				("TG" + std::to_string (m_pMiniDexed->GetTGSoloTG () + 1) + " ON") : "OFF";
+			// Solo Edit ON: jump into the selected TG menu so the user can
+			// audition and edit Voice/Bank/Volume/Pan/etc. for that TG only.
+			TGSelectHandler (m_pMiniDexed->GetTGSoloTG ());
+			std::string Value = "TG" + std::to_string (m_pMiniDexed->GetTGSoloTG () + 1) + " ON";
 			DisplayMIDIButtonOverlay ("Solo Edit", Value.c_str (), 1000);
+		}
+		else
+		{
+			// Solo Edit OFF: return visually to Performance -> Load, showing
+			// the current performance name.  Do not reload the performance, so
+			// unsaved edits made while soloing are preserved.
+			m_bPerformanceOverviewShowTGParameter = false;
+			m_bPerformanceOverviewAltPotGlobalLabels = false;
+			m_bPerformanceOverviewNoteShiftFine = false;
+			m_bPerformanceOverviewEditActive = false;
+			m_nPerformanceOverviewHoldRemainingMS = 0;
+			m_bSysExDisplayActive = false;
+			m_nSysExDisplaySequence++;
+			MainMenuSelectHandler ("Performance");
 		}
 		break;
 
