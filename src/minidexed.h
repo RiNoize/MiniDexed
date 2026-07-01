@@ -317,6 +317,7 @@ private:
 	void LoadPerformanceParameters(void); 
 	void ProcessSound (void);
 	void ApplyTGFilter (unsigned nTG, float32_t *pBuffer, unsigned nFrames);
+	void ApplyPerformanceFilterChannel (unsigned nChannel, float32_t *pBuffer, unsigned nFrames);
 	void ApplyDexedFilterSettings (unsigned nTG);
 	void ResetTGFilterState (unsigned nTG);
 	const char* GetNetworkDeviceShortName() const;

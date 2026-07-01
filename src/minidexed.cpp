@@ -1128,6 +1128,123 @@ void CMiniDexed::ApplyTGFilter (unsigned nTG, float32_t *pBuffer, unsigned nFram
 	}
 }
 
+
+void CMiniDexed::ApplyPerformanceFilterChannel (unsigned nChannel, float32_t *pBuffer, unsigned nFrames)
+{
+	if (nChannel >= 2 || !pBuffer || m_nToneGenerators == 0)
+	{
+		return;
+	}
+
+	unsigned nType = GetPerformanceFilterType ();
+	if (nType == FilterTypeClassic || nType == FilterTypeOff)
+	{
+		return;
+	}
+
+	// The Performance master filter uses TG1's Cutoff/Resonance as the
+	// canonical global values. AltPot Global already writes these same values
+	// to every TG, and Performance loading initializes all TGs consistently.
+	int nCutoff = m_nCutoff[0];
+	int nResonance = m_nResonance[0];
+
+	float32_t fSampleRate = (float32_t) m_pConfig->GetSampleRate ();
+	float32_t fFreq = MiniDexedFilterCutoffHz (nCutoff, fSampleRate);
+	float32_t fRes = MiniDexedClip01 ((float32_t) nResonance / 99.0f);
+	float32_t *z = m_FilterState[nChannel];
+
+	switch (nType)
+	{
+	case FilterTypeZynLP2P:
+	case FilterTypeZynBP2P:
+	case FilterTypeZynHP2P:
+	case FilterTypeZynNotch:
+	case FilterTypeZynPeak:
+		{
+			float32_t fQ = MiniDexedFilterQ (nResonance,
+				nType == FilterTypeZynBP2P || nType == FilterTypeZynNotch || nType == FilterTypeZynPeak);
+			float32_t fPeakDB = 3.0f + fRes * 15.0f;
+			TMiniDexedBiquad B = MiniDexedMakeBiquad (nType, fFreq, fQ, fSampleRate, fPeakDB);
+			float32_t fGain = 1.0f;
+			if (nType == FilterTypeZynBP2P)
+			{
+				fGain = 1.5f + fRes * 2.0f;
+			}
+			for (unsigned i = 0; i < nFrames; i++)
+			{
+				float32_t y = MiniDexedRunBiquad (B, pBuffer[i], z) * fGain;
+				pBuffer[i] = MiniDexedSoftClip (y);
+			}
+		}
+		break;
+
+	case FilterTypeDDWarmLPF:
+		{
+			float32_t f = (fFreq + fFreq) / fSampleRate;
+			if (f < 0.00001f)
+			{
+				f = 0.00001f;
+			}
+			if (f > 0.99f)
+			{
+				f = 0.99f;
+			}
+			float32_t p = f * (1.8f - 0.8f * f);
+			float32_t k = p + p - 1.0f;
+			float32_t t = (1.0f - p) * 1.386249f;
+			float32_t t2 = 12.0f + t * t;
+			float32_t r = fRes * (t2 + 6.0f * t) / (t2 - 6.0f * t);
+			float32_t drive = 1.0f + fRes * 0.9f;
+
+			for (unsigned i = 0; i < nFrames; i++)
+			{
+				float32_t x = MiniDexedSoftClip (pBuffer[i] * drive - r * z[3]);
+				float32_t y1 = x    * p + z[4] * p - k * z[0];
+				float32_t y2 = y1   * p + z[5] * p - k * z[1];
+				float32_t y3 = y2   * p + z[6] * p - k * z[2];
+				float32_t y4 = y3   * p + z[7] * p - k * z[3];
+				y4 -= (y4 * y4 * y4) / 6.0f;
+
+				z[4] = x;
+				z[5] = y1;
+				z[6] = y2;
+				z[7] = y3;
+				z[0] = y1;
+				z[1] = y2;
+				z[2] = y3;
+				z[3] = y4;
+				pBuffer[i] = MiniDexedSoftClip (y4 * (1.0f + fRes * 0.7f));
+			}
+		}
+		break;
+
+	case FilterTypeTwinPeak:
+		{
+			float32_t fQ = 1.2f + fRes * 10.0f;
+			float32_t fFreq2 = fFreq * (1.55f + fRes * 0.65f);
+			if (fFreq2 > fSampleRate * 0.44f)
+			{
+				fFreq2 = fSampleRate * 0.44f;
+			}
+			TMiniDexedBiquad B1 = MiniDexedMakeBiquad (FilterTypeZynBP2P, fFreq, fQ, fSampleRate);
+			TMiniDexedBiquad B2 = MiniDexedMakeBiquad (FilterTypeZynBP2P, fFreq2, fQ * 0.8f, fSampleRate);
+			float32_t fDry = 0.15f + (1.0f - fRes) * 0.25f;
+			float32_t fWet = 1.4f + fRes * 2.2f;
+			for (unsigned i = 0; i < nFrames; i++)
+			{
+				float32_t x = pBuffer[i];
+				float32_t y1 = MiniDexedRunBiquad (B1, x, &z[0]);
+				float32_t y2 = MiniDexedRunBiquad (B2, x, &z[4]);
+				pBuffer[i] = MiniDexedSoftClip (x * fDry + (y1 + y2) * fWet);
+			}
+		}
+		break;
+
+	default:
+		break;
+	}
+}
+
 void CMiniDexed::SetCutoff (int nCutoff, unsigned nTG)
 {
 	nCutoff = constrain (nCutoff, 0, 99);
@@ -2058,16 +2175,18 @@ void CMiniDexed::ProcessSound (void)
 			}
 		}
 
-		for (unsigned i = 0; i < m_nToneGenerators; i++)
-		{
-			ApplyTGFilter (i, m_OutputLevel[i], nFrames);
-		}
-
 		//
 		// Audio signal path after tone generators starts here
 		//
 
 		if (m_bQuadDAC8Chan) {
+			// Quad DAC mode has no MiniDexed stereo mixer or master bus.
+			// Keep the post-Dexed filters per output/TG here so every DAC
+			// channel still receives its own filtered signal.
+			for (unsigned i = 0; i < m_nToneGenerators; i++)
+			{
+				ApplyTGFilter (i, m_OutputLevel[i], nFrames);
+			}
 			// This is only supported when there are 8 TGs
 			assert (m_nToneGenerators == 8);
 
@@ -2155,6 +2274,13 @@ void CMiniDexed::ProcessSound (void)
 				m_ReverbSpinLock.Release ();
 			}
 			// END adding reverb
+
+			// Apply DreamDexed/Zyn/RBJ post filters as a true Performance master insert.
+			// This is deliberately placed after TG mixing and after reverb, so the
+			// filter processes 100% of the stereo output instead of only individual
+			// TG dry buffers. Classic MiniDexed remains Dexed's own per-TG filter.
+			ApplyPerformanceFilterChannel (0, SampleBuffer[indexL], nFrames);
+			ApplyPerformanceFilterChannel (1, SampleBuffer[indexR], nFrames);
 
 			// swap stereo channels if needed prior to writing back out
 			if (m_bChannelsSwapped)
