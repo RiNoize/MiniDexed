@@ -1167,6 +1167,8 @@ std::string CUIMenu::FormatOverviewTGParameterValue (unsigned nTGParameter, int 
 		case CMiniDexed::FilterTypeZynPeak:	return "ZPK";
 		case CMiniDexed::FilterTypeDDWarmLPF:	return "WLP";
 		case CMiniDexed::FilterTypeTwinPeak:	return "TWN";
+		case CMiniDexed::FilterTypeAnalogLP4P:	return "A4P";
+		case CMiniDexed::FilterTypeLadderLPF:	return "LAD";
 		default:				return "???";
 		}
 
@@ -2282,6 +2284,8 @@ string CUIMenu::ToFilterType (int nValue)
 	case CMiniDexed::FilterTypeZynPeak:	return "Zyn Peak";
 	case CMiniDexed::FilterTypeDDWarmLPF:	return "DD Warm LPF";
 	case CMiniDexed::FilterTypeTwinPeak:	return "Twin Peak";
+	case CMiniDexed::FilterTypeAnalogLP4P:	return "Analog LP 4P";
+	case CMiniDexed::FilterTypeLadderLPF:	return "Ladder LPF";
 	default:				return "?";
 	}
 }

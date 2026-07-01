@@ -171,6 +171,8 @@ public:
 		FilterTypeZynPeak,
 		FilterTypeDDWarmLPF,
 		FilterTypeTwinPeak,
+		FilterTypeAnalogLP4P,
+		FilterTypeLadderLPF,
 		FilterTypeUnknown
 	};
 

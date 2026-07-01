@@ -1040,18 +1040,42 @@ void CMiniDexed::ApplyTGFilter (unsigned nTG, float32_t *pBuffer, unsigned nFram
 	case FilterTypeZynNotch:
 	case FilterTypeZynPeak:
 		{
-			float32_t fQ = MiniDexedFilterQ (m_nResonance[nTG],
-				nType == FilterTypeZynBP2P || nType == FilterTypeZynNotch || nType == FilterTypeZynPeak);
-			float32_t fPeakDB = 3.0f + fRes * 15.0f;
-			TMiniDexedBiquad B = MiniDexedMakeBiquad (nType, fFreq, fQ, fSampleRate, fPeakDB);
+			// Musical per-filter mapping: keep the front-panel controls simple
+			// (Cutoff/Resonance), but avoid using the same Q law for every
+			// topology. Notch in particular must not become an ultra-narrow
+			// surgical EQ when Resonance is raised.
+			float32_t fQ = MiniDexedFilterQ (m_nResonance[nTG], false);
+			float32_t fPeakDB = 3.0f + fRes * 12.0f;
 			float32_t fGain = 1.0f;
+			float32_t fWet = 1.0f;
+
 			if (nType == FilterTypeZynBP2P)
 			{
-				fGain = 1.5f + fRes * 2.0f;
+				fQ = 0.75f + fRes * 5.0f;
+				fGain = 1.65f + fRes * 1.85f;
 			}
+			else if (nType == FilterTypeZynNotch)
+			{
+				// Wider and more audible than a narrow RBJ notch. Resonance now
+				// behaves more like intensity, not only bandwidth reduction.
+				fQ = 0.45f + fRes * 2.25f;
+				fWet = 0.60f + fRes * 0.40f;
+			}
+			else if (nType == FilterTypeZynPeak)
+			{
+				fQ = 0.65f + fRes * 4.0f;
+				fPeakDB = 2.0f + fRes * 13.0f;
+			}
+
+			TMiniDexedBiquad B = MiniDexedMakeBiquad (nType, fFreq, fQ, fSampleRate, fPeakDB);
 			for (unsigned i = 0; i < nFrames; i++)
 			{
-				float32_t y = MiniDexedRunBiquad (B, pBuffer[i], z) * fGain;
+				float32_t x = pBuffer[i];
+				float32_t y = MiniDexedRunBiquad (B, x, z) * fGain;
+				if (nType == FilterTypeZynNotch)
+				{
+					y = x * (1.0f - fWet) + y * fWet;
+				}
 				pBuffer[i] = MiniDexedSoftClip (y);
 			}
 		}
@@ -1095,6 +1119,67 @@ void CMiniDexed::ApplyTGFilter (unsigned nTG, float32_t *pBuffer, unsigned nFram
 				z[2] = y3;
 				z[3] = y4;
 				pBuffer[i] = MiniDexedSoftClip (y4 * (1.0f + fRes * 0.7f));
+			}
+		}
+		break;
+
+
+	case FilterTypeAnalogLP4P:
+		{
+			// Two cascaded low-pass biquads: clean 24 dB/oct-style slope,
+			// deeper and more decisive than the 2-pole LPF, but without extra drive.
+			float32_t fQ = 0.707f + fRes * 2.4f;
+			TMiniDexedBiquad B1 = MiniDexedMakeBiquad (FilterTypeZynLP2P, fFreq, fQ, fSampleRate);
+			TMiniDexedBiquad B2 = MiniDexedMakeBiquad (FilterTypeZynLP2P, fFreq, 0.707f + fRes * 1.2f, fSampleRate);
+			float32_t fGain = 1.0f + fRes * 0.25f;
+			for (unsigned i = 0; i < nFrames; i++)
+			{
+				float32_t y = MiniDexedRunBiquad (B1, pBuffer[i], &z[0]);
+				y = MiniDexedRunBiquad (B2, y, &z[4]) * fGain;
+				pBuffer[i] = MiniDexedSoftClip (y);
+			}
+		}
+		break;
+
+	case FilterTypeLadderLPF:
+		{
+			// Warm ladder-style 4-pole LPF with soft input/stage saturation.
+			// It is intentionally more coloured than Analog LP 4P.
+			float32_t f = (fFreq + fFreq) / fSampleRate;
+			if (f < 0.00001f)
+			{
+				f = 0.00001f;
+			}
+			if (f > 0.99f)
+			{
+				f = 0.99f;
+			}
+			float32_t p = f * (1.8f - 0.8f * f);
+			float32_t k = p + p - 1.0f;
+			float32_t t = (1.0f - p) * 1.386249f;
+			float32_t t2 = 12.0f + t * t;
+			float32_t r = (fRes * 1.10f) * (t2 + 6.0f * t) / (t2 - 6.0f * t);
+			float32_t drive = 1.15f + fRes * 1.85f;
+			float32_t outGain = 0.95f + fRes * 0.35f;
+
+			for (unsigned i = 0; i < nFrames; i++)
+			{
+				float32_t x = MiniDexedSoftClip (pBuffer[i] * drive - r * z[3]);
+				float32_t y1 = MiniDexedSoftClip (x    * p + z[4] * p - k * z[0]);
+				float32_t y2 = MiniDexedSoftClip (y1   * p + z[5] * p - k * z[1]);
+				float32_t y3 = MiniDexedSoftClip (y2   * p + z[6] * p - k * z[2]);
+				float32_t y4 = y3 * p + z[7] * p - k * z[3];
+				y4 = MiniDexedSoftClip (y4);
+
+				z[4] = x;
+				z[5] = y1;
+				z[6] = y2;
+				z[7] = y3;
+				z[0] = y1;
+				z[1] = y2;
+				z[2] = y3;
+				z[3] = y4;
+				pBuffer[i] = MiniDexedSoftClip (y4 * outGain);
 			}
 		}
 		break;
@@ -1161,18 +1246,42 @@ void CMiniDexed::ApplyPerformanceFilterChannel (unsigned nChannel, float32_t *pB
 	case FilterTypeZynNotch:
 	case FilterTypeZynPeak:
 		{
-			float32_t fQ = MiniDexedFilterQ (nResonance,
-				nType == FilterTypeZynBP2P || nType == FilterTypeZynNotch || nType == FilterTypeZynPeak);
-			float32_t fPeakDB = 3.0f + fRes * 15.0f;
-			TMiniDexedBiquad B = MiniDexedMakeBiquad (nType, fFreq, fQ, fSampleRate, fPeakDB);
+			// Musical per-filter mapping: keep the front-panel controls simple
+			// (Cutoff/Resonance), but avoid using the same Q law for every
+			// topology. Notch in particular must not become an ultra-narrow
+			// surgical EQ when Resonance is raised.
+			float32_t fQ = MiniDexedFilterQ (nResonance, false);
+			float32_t fPeakDB = 3.0f + fRes * 12.0f;
 			float32_t fGain = 1.0f;
+			float32_t fWet = 1.0f;
+
 			if (nType == FilterTypeZynBP2P)
 			{
-				fGain = 1.5f + fRes * 2.0f;
+				fQ = 0.75f + fRes * 5.0f;
+				fGain = 1.65f + fRes * 1.85f;
 			}
+			else if (nType == FilterTypeZynNotch)
+			{
+				// Wider and more audible than a narrow RBJ notch. Resonance now
+				// behaves more like intensity, not only bandwidth reduction.
+				fQ = 0.45f + fRes * 2.25f;
+				fWet = 0.60f + fRes * 0.40f;
+			}
+			else if (nType == FilterTypeZynPeak)
+			{
+				fQ = 0.65f + fRes * 4.0f;
+				fPeakDB = 2.0f + fRes * 13.0f;
+			}
+
+			TMiniDexedBiquad B = MiniDexedMakeBiquad (nType, fFreq, fQ, fSampleRate, fPeakDB);
 			for (unsigned i = 0; i < nFrames; i++)
 			{
-				float32_t y = MiniDexedRunBiquad (B, pBuffer[i], z) * fGain;
+				float32_t x = pBuffer[i];
+				float32_t y = MiniDexedRunBiquad (B, x, z) * fGain;
+				if (nType == FilterTypeZynNotch)
+				{
+					y = x * (1.0f - fWet) + y * fWet;
+				}
 				pBuffer[i] = MiniDexedSoftClip (y);
 			}
 		}
@@ -1214,6 +1323,67 @@ void CMiniDexed::ApplyPerformanceFilterChannel (unsigned nChannel, float32_t *pB
 				z[2] = y3;
 				z[3] = y4;
 				pBuffer[i] = MiniDexedSoftClip (y4 * (1.0f + fRes * 0.7f));
+			}
+		}
+		break;
+
+
+	case FilterTypeAnalogLP4P:
+		{
+			// Two cascaded low-pass biquads: clean 24 dB/oct-style slope,
+			// deeper and more decisive than the 2-pole LPF, but without extra drive.
+			float32_t fQ = 0.707f + fRes * 2.4f;
+			TMiniDexedBiquad B1 = MiniDexedMakeBiquad (FilterTypeZynLP2P, fFreq, fQ, fSampleRate);
+			TMiniDexedBiquad B2 = MiniDexedMakeBiquad (FilterTypeZynLP2P, fFreq, 0.707f + fRes * 1.2f, fSampleRate);
+			float32_t fGain = 1.0f + fRes * 0.25f;
+			for (unsigned i = 0; i < nFrames; i++)
+			{
+				float32_t y = MiniDexedRunBiquad (B1, pBuffer[i], &z[0]);
+				y = MiniDexedRunBiquad (B2, y, &z[4]) * fGain;
+				pBuffer[i] = MiniDexedSoftClip (y);
+			}
+		}
+		break;
+
+	case FilterTypeLadderLPF:
+		{
+			// Warm ladder-style 4-pole LPF with soft input/stage saturation.
+			// It is intentionally more coloured than Analog LP 4P.
+			float32_t f = (fFreq + fFreq) / fSampleRate;
+			if (f < 0.00001f)
+			{
+				f = 0.00001f;
+			}
+			if (f > 0.99f)
+			{
+				f = 0.99f;
+			}
+			float32_t p = f * (1.8f - 0.8f * f);
+			float32_t k = p + p - 1.0f;
+			float32_t t = (1.0f - p) * 1.386249f;
+			float32_t t2 = 12.0f + t * t;
+			float32_t r = (fRes * 1.10f) * (t2 + 6.0f * t) / (t2 - 6.0f * t);
+			float32_t drive = 1.15f + fRes * 1.85f;
+			float32_t outGain = 0.95f + fRes * 0.35f;
+
+			for (unsigned i = 0; i < nFrames; i++)
+			{
+				float32_t x = MiniDexedSoftClip (pBuffer[i] * drive - r * z[3]);
+				float32_t y1 = MiniDexedSoftClip (x    * p + z[4] * p - k * z[0]);
+				float32_t y2 = MiniDexedSoftClip (y1   * p + z[5] * p - k * z[1]);
+				float32_t y3 = MiniDexedSoftClip (y2   * p + z[6] * p - k * z[2]);
+				float32_t y4 = y3 * p + z[7] * p - k * z[3];
+				y4 = MiniDexedSoftClip (y4);
+
+				z[4] = x;
+				z[5] = y1;
+				z[6] = y2;
+				z[7] = y3;
+				z[0] = y1;
+				z[1] = y2;
+				z[2] = y3;
+				z[3] = y4;
+				pBuffer[i] = MiniDexedSoftClip (y4 * outGain);
 			}
 		}
 		break;
