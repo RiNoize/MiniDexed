@@ -832,7 +832,7 @@ struct TMiniDexedBiquad
 static TMiniDexedBiquad MiniDexedMakeBiquad (unsigned nMode, float32_t fFreq,
 	float32_t fQ, float32_t fSampleRate, float32_t fPeakGainDB = 9.0f)
 {
-	const float32_t PI = 3.14159265358979323846f;
+	const float32_t kPi = 3.14159265358979323846f;
 	TMiniDexedBiquad B = {1.0f, 0.0f, 0.0f, 0.0f, 0.0f};
 
 	if (fSampleRate <= 0.0f)
@@ -854,7 +854,7 @@ static TMiniDexedBiquad MiniDexedMakeBiquad (unsigned nMode, float32_t fFreq,
 		fQ = 0.1f;
 	}
 
-	float32_t omega = 2.0f * PI * fFreq / fSampleRate;
+	float32_t omega = 2.0f * kPi * fFreq / fSampleRate;
 	float32_t sn = sinf (omega);
 	float32_t cs = cosf (omega);
 	float32_t alpha = sn / (2.0f * fQ);
