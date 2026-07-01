@@ -87,7 +87,6 @@ const CUIMenu::TMenuItem CUIMenu::s_TGMenu[] =
 	{"Key High",	EditTGParameter,	0,	CMiniDexed::TGParameterNoteLimitHigh},
 	{"Cutoff",	EditTGParameter,	0,	CMiniDexed::TGParameterCutoff},
 	{"Resonance",	EditTGParameter,	0,	CMiniDexed::TGParameterResonance},
-	{"Filter Type",	EditTGParameter,	0,	CMiniDexed::TGParameterFilterType},
 	{"Pitch Bend",	MenuHandler,		s_EditPitchBendMenu},
 	{"Portamento",		MenuHandler,		s_EditPortamentoMenu},
 	{"Poly/Mono",		EditTGParameter,	0,	CMiniDexed::TGParameterMonoMode}, 

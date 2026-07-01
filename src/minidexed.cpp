@@ -968,35 +968,39 @@ void CMiniDexed::ApplyDexedFilterSettings (unsigned nTG)
 
 void CMiniDexed::SetFilterType (unsigned nFilterType, unsigned nTG)
 {
-	nFilterType = constrain (nFilterType, 0U, (unsigned) FilterTypeUnknown - 1U);
-
-	assert (nTG < CConfig::AllToneGenerators);
-	if (nTG >= m_nToneGenerators)
-	{
-		return;
-	}
-
-	if (m_nFilterType[nTG] != nFilterType)
-	{
-		m_nFilterType[nTG] = nFilterType;
-		ResetTGFilterState (nTG);
-		ApplyDexedFilterSettings (nTG);
-		m_UI.ParameterChanged ();
-	}
+	// Filter Type is intentionally a Performance-wide choice.
+	// Cutoff and Resonance may still be edited per TG, but all TGs must use
+	// the same filter algorithm so a Performance never contains a mixture like
+	// TG1=LP, TG2=BP, TG3=Off.
+	(void) nTG;
+	SetPerformanceFilterType (nFilterType);
 }
 
 unsigned CMiniDexed::GetFilterType (unsigned nTG) const
 {
-	assert (nTG < CConfig::AllToneGenerators);
-	return m_nFilterType[nTG];
+	(void) nTG;
+	return GetPerformanceFilterType ();
 }
 
 void CMiniDexed::SetPerformanceFilterType (unsigned nFilterType)
 {
 	nFilterType = constrain (nFilterType, 0U, (unsigned) FilterTypeUnknown - 1U);
+
+	bool bChanged = false;
 	for (unsigned nTG = 0; nTG < m_nToneGenerators; nTG++)
 	{
-		SetFilterType (nFilterType, nTG);
+		if (m_nFilterType[nTG] != nFilterType)
+		{
+			m_nFilterType[nTG] = nFilterType;
+			ResetTGFilterState (nTG);
+			ApplyDexedFilterSettings (nTG);
+			bChanged = true;
+		}
+	}
+
+	if (bChanged)
+	{
+		m_UI.ParameterChanged ();
 	}
 }
 
@@ -1467,7 +1471,8 @@ void CMiniDexed::CopyTG (unsigned nFromTG, unsigned nToTG)
 	SetMasterTune (m_nMasterTune[nFromTG], nToTG);
 	SetCutoff (m_nCutoff[nFromTG], nToTG);
 	SetResonance (m_nResonance[nFromTG], nToTG);
-	SetFilterType (m_nFilterType[nFromTG], nToTG);
+	// Filter Type is Performance-wide, so Copy TG must not create
+	// or preserve a separate filter algorithm for the destination TG.
 	SetReverbSend (m_nReverbSend[nFromTG], nToTG);
 
 	m_nNoteLimitLow[nToTG] = m_nNoteLimitLow[nFromTG];
@@ -1679,10 +1684,7 @@ int CMiniDexed::SetAltPotGlobalValue (unsigned nValue, unsigned nControl)
 
 	case AltPotGlobalFilterType:
 		nConvertedValue = (int) ((nValue * ((int) FilterTypeUnknown - 1) + 63) / 127);
-		for (unsigned nTG = 0; nTG < m_nToneGenerators; nTG++)
-		{
-			SetTGParameter (TGParameterFilterType, nConvertedValue, nTG);
-		}
+		SetPerformanceFilterType ((unsigned) nConvertedValue);
 		break;
 
 	case AltPotGlobalReverbSend:
@@ -1815,7 +1817,7 @@ int CMiniDexed::GetTGParameter (TTGParameter Parameter, unsigned nTG)
 	case TGParameterNoteLimitHigh:	return m_nNoteLimitHigh[nTG];
 	case TGParameterCutoff:		return m_nCutoff[nTG];
 	case TGParameterResonance:	return m_nResonance[nTG];
-	case TGParameterFilterType:	return m_nFilterType[nTG];
+	case TGParameterFilterType:	return GetPerformanceFilterType ();
 	case TGParameterMIDIChannel:	return m_nMIDIChannel[nTG];
 	case TGParameterReverbSend:	return m_nReverbSend[nTG];
 	case TGParameterPitchBendRange:	return m_nPitchBendRange[nTG];
@@ -2238,7 +2240,7 @@ bool CMiniDexed::DoSavePerformance (void)
 		m_PerformanceConfig.SetDetune (m_nMasterTune[nTG], nTG);
 		m_PerformanceConfig.SetCutoff (m_nCutoff[nTG], nTG);
 		m_PerformanceConfig.SetResonance (m_nResonance[nTG], nTG);
-		m_PerformanceConfig.SetFilterType (m_nFilterType[nTG], nTG);
+		m_PerformanceConfig.SetFilterType (GetPerformanceFilterType (), nTG);
 		m_PerformanceConfig.SetPitchBendRange (m_nPitchBendRange[nTG], nTG);
 		m_PerformanceConfig.SetPitchBendStep	(m_nPitchBendStep[nTG], nTG);
 		m_PerformanceConfig.SetPortamentoMode (m_nPortamentoMode[nTG], nTG);
@@ -2734,7 +2736,7 @@ void CMiniDexed::LoadPerformanceParameters(void)
 			SetMasterTune (m_PerformanceConfig.GetDetune (nTG), nTG);
 			SetCutoff (m_PerformanceConfig.GetCutoff (nTG), nTG);
 			SetResonance (m_PerformanceConfig.GetResonance (nTG), nTG);
-			SetFilterType (m_PerformanceConfig.GetFilterType (nTG), nTG);
+			// Filter Type is loaded once for the whole Performance after the TG loop.
 			setPitchbendRange (m_PerformanceConfig.GetPitchBendRange (nTG), nTG);
 			setPitchbendStep (m_PerformanceConfig.GetPitchBendStep (nTG), nTG);
 			setPortamentoMode (m_PerformanceConfig.GetPortamentoMode (nTG), nTG);
@@ -2767,6 +2769,8 @@ void CMiniDexed::LoadPerformanceParameters(void)
 		}
 
 		// Effects
+		SetPerformanceFilterType (m_PerformanceConfig.GetFilterType (0));
+
 		SetParameter (ParameterCompressorEnable, m_PerformanceConfig.GetCompressorEnable () ? 1 : 0);
 		SetParameter (ParameterReverbEnable, m_PerformanceConfig.GetReverbEnable () ? 1 : 0);
 		SetParameter (ParameterReverbSize, m_PerformanceConfig.GetReverbSize ());

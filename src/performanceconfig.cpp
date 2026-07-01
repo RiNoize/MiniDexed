@@ -105,6 +105,7 @@ bool CPerformanceConfig::Load (void)
 	}
 
 	bool bResult = false;
+	unsigned nPerformanceFilterType = m_Properties.GetNumber ("FilterType", m_Properties.GetNumber ("FilterType1", 1));
 
 	for (unsigned nTG = 0; nTG < CConfig::AllToneGenerators; nTG++)
 	{
@@ -152,8 +153,9 @@ bool CPerformanceConfig::Load (void)
 		PropertyName.Format ("Resonance%u", nTG+1);
 		m_nResonance[nTG] = m_Properties.GetNumber (PropertyName, 0);
 
-		PropertyName.Format ("FilterType%u", nTG+1);
-		m_nFilterType[nTG] = m_Properties.GetNumber (PropertyName, 1);
+		// Single Performance-wide Filter Type.  Old FilterType1 is accepted as
+		// a migration fallback when FilterType is not present.
+		m_nFilterType[nTG] = nPerformanceFilterType;
 
 		PropertyName.Format ("NoteLimitLow%u", nTG+1);
 		m_nNoteLimitLow[nTG] = m_Properties.GetNumber (PropertyName, 0);
@@ -231,6 +233,9 @@ bool CPerformanceConfig::Save (void)
 {
 	m_Properties.RemoveAll ();
 
+	// New canonical storage: one FilterType for the whole Performance.
+	m_Properties.SetNumber ("FilterType", m_nFilterType[0]);
+
 	for (unsigned nTG = 0; nTG < m_nToneGenerators; nTG++)
 	{
 		CString PropertyName;
@@ -272,8 +277,10 @@ bool CPerformanceConfig::Save (void)
 		PropertyName.Format ("Resonance%u", nTG+1);
 		m_Properties.SetNumber (PropertyName, m_nResonance[nTG]);
 
+		// Compatibility line for older builds/tools.  It is always the same
+		// value as the Performance-wide FilterType.
 		PropertyName.Format ("FilterType%u", nTG+1);
-		m_Properties.SetNumber (PropertyName, m_nFilterType[nTG]);
+		m_Properties.SetNumber (PropertyName, m_nFilterType[0]);
 
 		PropertyName.Format ("NoteLimitLow%u", nTG+1);
 		m_Properties.SetNumber (PropertyName, m_nNoteLimitLow[nTG]);
@@ -476,8 +483,11 @@ void CPerformanceConfig::SetResonance (unsigned nValue, unsigned nTG)
 
 void CPerformanceConfig::SetFilterType (unsigned nValue, unsigned nTG)
 {
-	assert (nTG < CConfig::AllToneGenerators);
-	m_nFilterType[nTG] = nValue;
+	(void) nTG;
+	for (unsigned i = 0; i < CConfig::AllToneGenerators; i++)
+	{
+		m_nFilterType[i] = nValue;
+	}
 }
 
 void CPerformanceConfig::SetNoteLimitLow (unsigned nValue, unsigned nTG)
