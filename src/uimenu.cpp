@@ -3260,7 +3260,11 @@ void CUIMenu::EditPerformanceFilterType (CUIMenu *pUIMenu, TMenuEvent Event)
 	}
 
 	std::string Value = ToFilterType ((int) pUIMenu->m_pMiniDexed->GetPerformanceFilterType ());
-	pUIMenu->m_pUI->DisplayWrite ("Performance",
+
+	// On 16x2 LCDs, showing "Performance" + "Filter Type" on the
+	// first line overflows and wraps visually.  Keep this page explicit:
+	// line 1 = parameter name, line 2 = selected filter name.
+	pUIMenu->m_pUI->DisplayWrite ("",
 				      "Filter Type",
 				      Value.c_str (),
 				      nValue > rParam.Minimum, nValue < rParam.Maximum);
