@@ -29,6 +29,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <assert.h>
+#include <math.h>
 #include "arm_float_to_q23.h"
 #include "arm_scale_zip_f32.h"
 
@@ -99,8 +100,6 @@ CMiniDexed::CMiniDexed (CConfig *pConfig, CInterruptSystem *pInterrupt,
 		m_nCutoff[i] = 99;
 		m_nResonance[i] = 0;
 		m_nFilterType[i] = FilterTypeClassic;
-		m_FilterCutoffSmooth[i] = 0.985f;
-		m_FilterResonanceSmooth[i] = 0.0f;
 		ResetTGFilterState (i);
 		m_nMIDIChannel[i] = CMIDIDevice::Disabled;
 		m_nPitchBendRange[i] = 2;
@@ -774,8 +773,8 @@ void CMiniDexed::SetMasterTune (int nMasterTune, unsigned nTG)
 
 static float32_t MiniDexedSoftClip (float32_t x)
 {
-	// Cheap soft clip for the "fun" filters.  It adds character without
-	// needing the heavier math library tanh() call on the audio path.
+	// Cheap bounded soft clip.  Used only by the character filters to keep
+	// resonance/drive musical without hard digital clipping.
 	if (x > 3.0f)
 	{
 		return 1.0f;
@@ -787,45 +786,143 @@ static float32_t MiniDexedSoftClip (float32_t x)
 	return x * (27.0f + x * x) / (27.0f + 9.0f * x * x);
 }
 
-static float32_t MiniDexedFilterCutoffTarget (int nCutoff)
+static float32_t MiniDexedClip01 (float32_t x)
 {
-	// Do not ever reach exactly 1.0.  In the original Dexed filter path,
-	// cutoff == 1.0 can behave like a hard bypass, which makes the last
-	// step (98 -> 99) sound much larger than the rest of the sweep.
-	float32_t target = (float32_t) (nCutoff + 1) / 101.0f;
-	if (target > 0.985f)
+	if (x < 0.0f)
 	{
-		target = 0.985f;
+		return 0.0f;
 	}
-	if (target < 0.001f)
+	if (x > 1.0f)
 	{
-		target = 0.001f;
+		return 1.0f;
 	}
-	return target;
+	return x;
 }
 
-static float32_t MiniDexedStepCutoffTarget (int nCutoff)
+static float32_t MiniDexedFilterCutoffHz (int nCutoff, float32_t fSampleRate)
 {
-	// Quantized by ear for musical stepped sweeps.  These are not linear
-	// controller steps: they spend more resolution in the low/mid range and
-	// keep the top just below the hard-open/bypass area.
-	static const float32_t Steps[] =
+	// Musical/logarithmic cutoff law.  Do not drive the post filters to Nyquist:
+	// leaving headroom avoids the old "top value = bypass" feeling.
+	float32_t norm = MiniDexedClip01 ((float32_t) nCutoff / 99.0f);
+	float32_t fMin = 35.0f;
+	float32_t fMax = fSampleRate * 0.42f;
+	if (fMax > 18500.0f)
 	{
-		0.018f, 0.026f, 0.038f, 0.054f,
-		0.075f, 0.103f, 0.140f, 0.188f,
-		0.250f, 0.328f, 0.425f, 0.540f,
-		0.665f, 0.785f, 0.895f, 0.975f
-	};
-
-	unsigned nStep = (unsigned) constrain ((nCutoff * 16) / 100, 0, 15);
-	return Steps[nStep];
+		fMax = 18500.0f;
+	}
+	if (fMax < fMin + 100.0f)
+	{
+		fMax = fMin + 100.0f;
+	}
+	return fMin * powf (fMax / fMin, norm);
 }
 
-static bool MiniDexedFilterIsStepType (unsigned nType)
+static float32_t MiniDexedFilterQ (int nResonance, bool bStrong = false)
 {
-	return nType == CMiniDexed::FilterTypeStepLP
-	    || nType == CMiniDexed::FilterTypeStepBP
-	    || nType == CMiniDexed::FilterTypeStepMetal;
+	float32_t r = MiniDexedClip01 ((float32_t) nResonance / 99.0f);
+	return bStrong ? (0.55f + r * 9.5f) : (0.707f + r * 5.5f);
+}
+
+struct TMiniDexedBiquad
+{
+	float32_t b0, b1, b2;
+	float32_t a1, a2;
+};
+
+static TMiniDexedBiquad MiniDexedMakeBiquad (unsigned nMode, float32_t fFreq,
+	float32_t fQ, float32_t fSampleRate, float32_t fPeakGainDB = 9.0f)
+{
+	const float32_t PI = 3.14159265358979323846f;
+	TMiniDexedBiquad B = {1.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+
+	if (fSampleRate <= 0.0f)
+	{
+		return B;
+	}
+
+	if (fFreq < 10.0f)
+	{
+		fFreq = 10.0f;
+	}
+	float32_t fLimit = fSampleRate * 0.45f;
+	if (fFreq > fLimit)
+	{
+		fFreq = fLimit;
+	}
+	if (fQ < 0.1f)
+	{
+		fQ = 0.1f;
+	}
+
+	float32_t omega = 2.0f * PI * fFreq / fSampleRate;
+	float32_t sn = sinf (omega);
+	float32_t cs = cosf (omega);
+	float32_t alpha = sn / (2.0f * fQ);
+	float32_t a0 = 1.0f + alpha;
+
+	switch (nMode)
+	{
+	case 2: // Zyn LP 2P / RBJ low-pass
+		B.b0 = ((1.0f - cs) * 0.5f) / a0;
+		B.b1 = (1.0f - cs) / a0;
+		B.b2 = B.b0;
+		B.a1 = (-2.0f * cs) / a0;
+		B.a2 = (1.0f - alpha) / a0;
+		break;
+
+	case 3: // Zyn BP 2P / RBJ band-pass
+		B.b0 = alpha / a0;
+		B.b1 = 0.0f;
+		B.b2 = -alpha / a0;
+		B.a1 = (-2.0f * cs) / a0;
+		B.a2 = (1.0f - alpha) / a0;
+		break;
+
+	case 4: // Zyn HP 2P / RBJ high-pass
+		B.b0 = ((1.0f + cs) * 0.5f) / a0;
+		B.b1 = -(1.0f + cs) / a0;
+		B.b2 = B.b0;
+		B.a1 = (-2.0f * cs) / a0;
+		B.a2 = (1.0f - alpha) / a0;
+		break;
+
+	case 5: // Zyn Notch / RBJ notch
+		B.b0 = 1.0f / a0;
+		B.b1 = (-2.0f * cs) / a0;
+		B.b2 = 1.0f / a0;
+		B.a1 = (-2.0f * cs) / a0;
+		B.a2 = (1.0f - alpha) / a0;
+		break;
+
+	case 6: // Zyn Peak / RBJ peaking EQ
+		{
+			float32_t A = powf (10.0f, fPeakGainDB / 40.0f);
+			a0 = 1.0f + alpha / A;
+			B.b0 = (1.0f + alpha * A) / a0;
+			B.b1 = (-2.0f * cs) / a0;
+			B.b2 = (1.0f - alpha * A) / a0;
+			B.a1 = (-2.0f * cs) / a0;
+			B.a2 = (1.0f - alpha / A) / a0;
+		}
+		break;
+
+	default:
+		break;
+	}
+
+	return B;
+}
+
+static float32_t MiniDexedRunBiquad (const TMiniDexedBiquad &B, float32_t x,
+	float32_t *z)
+{
+	float32_t y = B.b0 * x + B.b1 * z[0] + B.b2 * z[1]
+		       - B.a1 * z[2] - B.a2 * z[3];
+	z[1] = z[0];
+	z[0] = x;
+	z[3] = z[2];
+	z[2] = y;
+	return y;
 }
 
 void CMiniDexed::ResetTGFilterState (unsigned nTG)
@@ -835,7 +932,7 @@ void CMiniDexed::ResetTGFilterState (unsigned nTG)
 		return;
 	}
 
-	for (unsigned i = 0; i < 4; i++)
+	for (unsigned i = 0; i < 12; i++)
 	{
 		m_FilterState[nTG][i] = 0.0f;
 	}
@@ -844,8 +941,6 @@ void CMiniDexed::ResetTGFilterState (unsigned nTG)
 		m_FilterCombBuffer[nTG][i] = 0.0f;
 	}
 	m_FilterCombIndex[nTG] = 0;
-	m_FilterCutoffSmooth[nTG] = MiniDexedFilterCutoffTarget (m_nCutoff[nTG]);
-	m_FilterResonanceSmooth[nTG] = (float32_t) m_nResonance[nTG] / 99.0f;
 }
 
 void CMiniDexed::ApplyDexedFilterSettings (unsigned nTG)
@@ -859,13 +954,13 @@ void CMiniDexed::ApplyDexedFilterSettings (unsigned nTG)
 	assert (m_pTG[nTG]);
 	if (m_nFilterType[nTG] == FilterTypeClassic)
 	{
-		m_pTG[nTG]->setFilterCutoff (MiniDexedFilterCutoffTarget (m_nCutoff[nTG]));
-		m_pTG[nTG]->setFilterResonance (mapfloat (m_nResonance[nTG], 0, 99, 0.0f, 0.985f));
+		m_pTG[nTG]->setFilterCutoff (mapfloat (m_nCutoff[nTG], 0, 99, 0.0f, 1.0f));
+		m_pTG[nTG]->setFilterResonance (mapfloat (m_nResonance[nTG], 0, 99, 0.0f, 1.0f));
 	}
 	else
 	{
-		// The new character filters are applied after the Dexed TG output.
-		// Keep Dexed's own simple filter open so the two filters do not stack.
+		// DreamDexed/Zyn-style post filters are applied after the TG output.
+		// Keep Dexed's own filter open so two filters do not stack unexpectedly.
 		m_pTG[nTG]->setFilterCutoff (1.0f);
 		m_pTG[nTG]->setFilterResonance (0.0f);
 	}
@@ -896,6 +991,24 @@ unsigned CMiniDexed::GetFilterType (unsigned nTG) const
 	return m_nFilterType[nTG];
 }
 
+void CMiniDexed::SetPerformanceFilterType (unsigned nFilterType)
+{
+	nFilterType = constrain (nFilterType, 0U, (unsigned) FilterTypeUnknown - 1U);
+	for (unsigned nTG = 0; nTG < m_nToneGenerators; nTG++)
+	{
+		SetFilterType (nFilterType, nTG);
+	}
+}
+
+unsigned CMiniDexed::GetPerformanceFilterType (void) const
+{
+	if (m_nToneGenerators == 0)
+	{
+		return FilterTypeClassic;
+	}
+	return m_nFilterType[0];
+}
+
 void CMiniDexed::ApplyTGFilter (unsigned nTG, float32_t *pBuffer, unsigned nFrames)
 {
 	assert (nTG < CConfig::AllToneGenerators);
@@ -910,145 +1023,99 @@ void CMiniDexed::ApplyTGFilter (unsigned nTG, float32_t *pBuffer, unsigned nFram
 		return;
 	}
 
-	// Smooth the controller values a little to reduce zipper noise from 0..99
-	// MIDI/encoder steps.  Step filters quantize the target first, then glide
-	// very quickly to the new step: musical stair-steps, but no digital crack.
-	float32_t targetCutoff = MiniDexedFilterIsStepType (nType)
-					? MiniDexedStepCutoffTarget (m_nCutoff[nTG])
-					: MiniDexedFilterCutoffTarget (m_nCutoff[nTG]);
-	float32_t targetResonance = (float32_t) m_nResonance[nTG] / 99.0f;
-	float32_t smoothAmount = MiniDexedFilterIsStepType (nType) ? 0.55f : 0.35f;
-	m_FilterCutoffSmooth[nTG] += (targetCutoff - m_FilterCutoffSmooth[nTG]) * smoothAmount;
-	m_FilterResonanceSmooth[nTG] += (targetResonance - m_FilterResonanceSmooth[nTG]) * 0.35f;
-	float32_t cutoff = m_FilterCutoffSmooth[nTG];
-	float32_t resonance = m_FilterResonanceSmooth[nTG];
-
-	// Control law chosen by ear rather than by textbook accuracy: useful range,
-	// stable at high resonance, and light enough for 8 TGs on small Raspberry Pis.
-	float32_t a = 0.006f + cutoff * cutoff * 0.36f;
-	if (a > 0.42f)
-	{
-		a = 0.42f;
-	}
-
+	float32_t fSampleRate = (float32_t) m_pConfig->GetSampleRate ();
+	float32_t fFreq = MiniDexedFilterCutoffHz (m_nCutoff[nTG], fSampleRate);
+	float32_t fRes = MiniDexedClip01 ((float32_t) m_nResonance[nTG] / 99.0f);
 	float32_t *z = m_FilterState[nTG];
 
 	switch (nType)
 	{
-	case FilterTypeDirtyLP:
-		for (unsigned i = 0; i < nFrames; i++)
+	case FilterTypeZynLP2P:
+	case FilterTypeZynBP2P:
+	case FilterTypeZynHP2P:
+	case FilterTypeZynNotch:
+	case FilterTypeZynPeak:
 		{
-			float32_t input = pBuffer[i] - z[1] * resonance * 1.15f;
-			input = MiniDexedSoftClip (input * (1.0f + resonance * 1.4f));
-			z[0] += a * (input - z[0]);
-			z[1] += a * (z[0] - z[1]);
-			pBuffer[i] = MiniDexedSoftClip (z[1] * (1.0f + resonance * 0.8f));
-		}
-		break;
-
-	case FilterTypeAcidLP:
-		for (unsigned i = 0; i < nFrames; i++)
-		{
-			float32_t input = pBuffer[i] - z[3] * resonance * 3.2f;
-			input = MiniDexedSoftClip (input * (1.0f + resonance * 2.2f));
-			z[0] += a * (input - z[0]);
-			z[1] += a * (z[0] - z[1]);
-			z[2] += a * (z[1] - z[2]);
-			z[3] += a * (z[2] - z[3]);
-			pBuffer[i] = MiniDexedSoftClip (z[3] * (1.0f + resonance * 1.5f));
-		}
-		break;
-
-	case FilterTypeStepLP:
-		for (unsigned i = 0; i < nFrames; i++)
-		{
-			float32_t input = MiniDexedSoftClip (pBuffer[i] * (1.0f + resonance * 0.9f));
-			z[0] += a * (input - z[0]);
-			z[1] += a * (z[0] - z[1]);
-			z[2] += a * (z[1] - z[2]);
-			pBuffer[i] = MiniDexedSoftClip (z[2] * (1.0f + resonance * 1.1f));
-		}
-		break;
-
-	case FilterTypeStepBP:
-		for (unsigned i = 0; i < nFrames; i++)
-		{
-			float32_t input = pBuffer[i];
-			float32_t hp = input - z[0] - z[1] * (0.35f + (1.0f - resonance) * 1.2f);
-			z[1] += a * hp;
-			z[0] += a * z[1];
-			float32_t bp = z[1] * (1.4f + resonance * 4.0f);
-			pBuffer[i] = MiniDexedSoftClip (bp);
-		}
-		break;
-
-	case FilterTypeNasalBP:
-	case FilterTypeHollowNotch:
-		for (unsigned i = 0; i < nFrames; i++)
-		{
-			float32_t input = pBuffer[i];
-			float32_t hp = input - z[0] - z[1] * (0.45f + (1.0f - resonance) * 1.6f);
-			z[1] += a * hp;       // band-pass state
-			z[0] += a * z[1];     // low-pass state
-			float32_t bp = z[1] * (1.0f + resonance * 3.0f);
-			if (nType == FilterTypeNasalBP)
+			float32_t fQ = MiniDexedFilterQ (m_nResonance[nTG],
+				nType == FilterTypeZynBP2P || nType == FilterTypeZynNotch || nType == FilterTypeZynPeak);
+			float32_t fPeakDB = 3.0f + fRes * 15.0f;
+			TMiniDexedBiquad B = MiniDexedMakeBiquad (nType, fFreq, fQ, fSampleRate, fPeakDB);
+			float32_t fGain = 1.0f;
+			if (nType == FilterTypeZynBP2P)
 			{
-				pBuffer[i] = MiniDexedSoftClip (bp);
+				fGain = 1.5f + fRes * 2.0f;
 			}
-			else
-			{
-				pBuffer[i] = MiniDexedSoftClip ((input - bp * (0.45f + resonance * 0.8f)) * 1.05f);
-			}
-		}
-		break;
-
-	case FilterTypeTelephone:
-		{
-			// Two-stage band limit: first remove lows, then remove highs.
-			float32_t hpA = 0.02f + cutoff * 0.18f;
-			float32_t lpA = 0.025f + cutoff * 0.33f;
 			for (unsigned i = 0; i < nFrames; i++)
 			{
-				float32_t input = pBuffer[i];
-				z[0] += hpA * (input - z[0]);
-				float32_t hp = input - z[0];
-				z[1] += lpA * (hp - z[1]);
-				pBuffer[i] = MiniDexedSoftClip (z[1] * (1.6f + resonance));
+				float32_t y = MiniDexedRunBiquad (B, pBuffer[i], z) * fGain;
+				pBuffer[i] = MiniDexedSoftClip (y);
 			}
 		}
 		break;
 
-	case FilterTypeCombMetal:
-	case FilterTypeStepMetal:
+	case FilterTypeDDWarmLPF:
 		{
-			float32_t delay = 2.0f + (1.0f - cutoff) * (float32_t) (FilterCombBufferSize - 3);
-			unsigned nDelayA = (unsigned) delay;
-			if (nDelayA < 2)
+			// Compact version of the DreamDexed/MiniDexed warm 4-pole LPF idea:
+			// four one-pole stages with resonance feedback and a soft non-linearity.
+			float32_t f = (fFreq + fFreq) / fSampleRate;
+			if (f < 0.00001f)
 			{
-				nDelayA = 2;
+				f = 0.00001f;
 			}
-			if (nDelayA >= FilterCombBufferSize - 1)
+			if (f > 0.99f)
 			{
-				nDelayA = FilterCombBufferSize - 2;
+				f = 0.99f;
 			}
-			unsigned nDelayB = nDelayA + 1;
-			float32_t frac = delay - (float32_t) nDelayA;
-			float32_t feedback = resonance * (nType == FilterTypeStepMetal ? 0.90f : 0.82f);
-			unsigned nIndex = m_FilterCombIndex[nTG];
+			float32_t p = f * (1.8f - 0.8f * f);
+			float32_t k = p + p - 1.0f;
+			float32_t t = (1.0f - p) * 1.386249f;
+			float32_t t2 = 12.0f + t * t;
+			float32_t r = fRes * (t2 + 6.0f * t) / (t2 - 6.0f * t);
+			float32_t drive = 1.0f + fRes * 0.9f;
+
 			for (unsigned i = 0; i < nFrames; i++)
 			{
-				unsigned nReadA = (nIndex + FilterCombBufferSize - nDelayA) % FilterCombBufferSize;
-				unsigned nReadB = (nIndex + FilterCombBufferSize - nDelayB) % FilterCombBufferSize;
-				float32_t delayed = m_FilterCombBuffer[nTG][nReadA] * (1.0f - frac)
-							 + m_FilterCombBuffer[nTG][nReadB] * frac;
-				float32_t input = pBuffer[i];
-				float32_t y = MiniDexedSoftClip (input * (nType == FilterTypeStepMetal ? 0.55f : 0.65f)
-									 + delayed * (0.55f + resonance * (nType == FilterTypeStepMetal ? 0.48f : 0.35f)));
-				m_FilterCombBuffer[nTG][nIndex] = MiniDexedSoftClip (input + delayed * feedback);
-				nIndex = (nIndex + 1) % FilterCombBufferSize;
-				pBuffer[i] = y;
+				float32_t x = MiniDexedSoftClip (pBuffer[i] * drive - r * z[3]);
+				float32_t y1 = x    * p + z[4] * p - k * z[0];
+				float32_t y2 = y1   * p + z[5] * p - k * z[1];
+				float32_t y3 = y2   * p + z[6] * p - k * z[2];
+				float32_t y4 = y3   * p + z[7] * p - k * z[3];
+				y4 -= (y4 * y4 * y4) / 6.0f;
+
+				z[4] = x;
+				z[5] = y1;
+				z[6] = y2;
+				z[7] = y3;
+				z[0] = y1;
+				z[1] = y2;
+				z[2] = y3;
+				z[3] = y4;
+				pBuffer[i] = MiniDexedSoftClip (y4 * (1.0f + fRes * 0.7f));
 			}
-			m_FilterCombIndex[nTG] = nIndex;
+		}
+		break;
+
+	case FilterTypeTwinPeak:
+		{
+			// Surprise mode: two resonant Zyn-style band-pass peaks in parallel.
+			// With FM material it gives vocal/formant-ish movement without a heavy FX engine.
+			float32_t fQ = 1.2f + fRes * 10.0f;
+			float32_t fFreq2 = fFreq * (1.55f + fRes * 0.65f);
+			if (fFreq2 > fSampleRate * 0.44f)
+			{
+				fFreq2 = fSampleRate * 0.44f;
+			}
+			TMiniDexedBiquad B1 = MiniDexedMakeBiquad (FilterTypeZynBP2P, fFreq, fQ, fSampleRate);
+			TMiniDexedBiquad B2 = MiniDexedMakeBiquad (FilterTypeZynBP2P, fFreq2, fQ * 0.8f, fSampleRate);
+			float32_t fDry = 0.15f + (1.0f - fRes) * 0.25f;
+			float32_t fWet = 1.4f + fRes * 2.2f;
+			for (unsigned i = 0; i < nFrames; i++)
+			{
+				float32_t x = pBuffer[i];
+				float32_t y1 = MiniDexedRunBiquad (B1, x, &z[0]);
+				float32_t y2 = MiniDexedRunBiquad (B2, x, &z[4]);
+				pBuffer[i] = MiniDexedSoftClip (x * fDry + (y1 + y2) * fWet);
+			}
 		}
 		break;
 
@@ -1495,6 +1562,7 @@ CMiniDexed::TTGParameter CMiniDexed::GetAltPotGlobalTGParameter (unsigned nContr
 	{
 	case AltPotGlobalCutoff:			return TGParameterCutoff;
 	case AltPotGlobalResonance:		return TGParameterResonance;
+	case AltPotGlobalFilterType:		return TGParameterFilterType;
 	case AltPotGlobalReverbSend:		return TGParameterReverbSend;
 	case AltPotGlobalPortamentoTime:		return TGParameterPortamentoTime;
 	case AltPotGlobalVolumeTrim:		return TGParameterUnknown; // live Expression trim, not saved TG volume
@@ -1508,8 +1576,9 @@ const char *CMiniDexed::GetAltPotGlobalControlName (unsigned nControl) const
 	{
 	case AltPotGlobalCutoff:			return "Cutoff";
 	case AltPotGlobalResonance:		return "Resonance";
-	case AltPotGlobalReverbSend:		return "Reverb Send";
+	case AltPotGlobalFilterType:		return "Filter Type";
 	case AltPotGlobalVolumeTrim:		return "Volume Trim";
+	case AltPotGlobalReverbSend:		return "Reverb Send";
 	case AltPotGlobalPortamentoTime:		return "Portamento";
 	default:				return "---";
 	}
@@ -1521,8 +1590,9 @@ const char *CMiniDexed::GetAltPotGlobalControlShortName (unsigned nControl) cons
 	{
 	case AltPotGlobalCutoff:			return "Cut";
 	case AltPotGlobalResonance:		return "Res";
-	case AltPotGlobalReverbSend:		return "Rev";
+	case AltPotGlobalFilterType:		return "Typ";
 	case AltPotGlobalVolumeTrim:		return "Vol";
+	case AltPotGlobalReverbSend:		return "Rev";
 	case AltPotGlobalPortamentoTime:		return "Por";
 	default:				return "---";
 	}
@@ -1604,6 +1674,14 @@ int CMiniDexed::SetAltPotGlobalValue (unsigned nValue, unsigned nControl)
 		for (unsigned nTG = 0; nTG < m_nToneGenerators; nTG++)
 		{
 			SetTGParameter (TGParameterResonance, nConvertedValue, nTG);
+		}
+		break;
+
+	case AltPotGlobalFilterType:
+		nConvertedValue = (int) ((nValue * ((int) FilterTypeUnknown - 1) + 63) / 127);
+		for (unsigned nTG = 0; nTG < m_nToneGenerators; nTG++)
+		{
+			SetTGParameter (TGParameterFilterType, nConvertedValue, nTG);
 		}
 		break;
 

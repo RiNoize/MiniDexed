@@ -51,7 +51,7 @@ public:
 	int GetDetune (unsigned nTG) const;			// -99 .. 99
 	unsigned GetCutoff (unsigned nTG) const;		// 0 .. 99
 	unsigned GetResonance (unsigned nTG) const;		// 0 .. 99
-	unsigned GetFilterType (unsigned nTG) const;		// 0 .. 10
+	unsigned GetFilterType (unsigned nTG) const;		// 0 .. 8
 	unsigned GetNoteLimitLow (unsigned nTG) const;		// 0 .. 127
 	unsigned GetNoteLimitHigh (unsigned nTG) const;		// 0 .. 127
 	int GetNoteShift (unsigned nTG) const;			// -24 .. 24
@@ -64,13 +64,13 @@ public:
 	bool GetMonoMode (unsigned nTG) const; 				// 0 .. 1
 	
 	unsigned GetModulationWheelRange (unsigned nTG) const; // 0 .. 99
-	unsigned GetModulationWheelTarget (unsigned nTG) const; // 0 .. 10
+	unsigned GetModulationWheelTarget (unsigned nTG) const; // 0 .. 7
 	unsigned GetFootControlRange (unsigned nTG) const; // 0 .. 99
-	unsigned GetFootControlTarget (unsigned nTG) const;  // 0 .. 10
+	unsigned GetFootControlTarget (unsigned nTG) const;  // 0 .. 7
 	unsigned GetBreathControlRange (unsigned nTG) const; // 0 .. 99
-	unsigned GetBreathControlTarget (unsigned nTG) const;  // 0 .. 10
+	unsigned GetBreathControlTarget (unsigned nTG) const;  // 0 .. 7
 	unsigned GetAftertouchRange (unsigned nTG) const; // 0 .. 99
-	unsigned GetAftertouchTarget (unsigned nTG) const;  // 0 .. 10
+	unsigned GetAftertouchTarget (unsigned nTG) const;  // 0 .. 7
 
 	void SetBankNumber (unsigned nValue, unsigned nTG);
 	void SetVoiceNumber (unsigned nValue, unsigned nTG);

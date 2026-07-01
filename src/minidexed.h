@@ -88,6 +88,8 @@ public:
 	void SetResonance (int nResonance, unsigned nTG);		// 0 .. 99
 	void SetFilterType (unsigned nFilterType, unsigned nTG);	// 0 .. FilterTypeUnknown-1
 	unsigned GetFilterType (unsigned nTG) const;
+	void SetPerformanceFilterType (unsigned nFilterType);
+	unsigned GetPerformanceFilterType (void) const;
 	void SetMIDIChannel (uint8_t uchChannel, unsigned nTG);
 
 	void keyup (int16_t pitch, unsigned nTG);
@@ -160,17 +162,15 @@ public:
 
 	enum TFilterType
 	{
-		FilterTypeClassic,
 		FilterTypeOff,
-		FilterTypeDirtyLP,
-		FilterTypeAcidLP,
-		FilterTypeNasalBP,
-		FilterTypeTelephone,
-		FilterTypeHollowNotch,
-		FilterTypeCombMetal,
-		FilterTypeStepLP,
-		FilterTypeStepBP,
-		FilterTypeStepMetal,
+		FilterTypeClassic,
+		FilterTypeZynLP2P,
+		FilterTypeZynBP2P,
+		FilterTypeZynHP2P,
+		FilterTypeZynNotch,
+		FilterTypeZynPeak,
+		FilterTypeDDWarmLPF,
+		FilterTypeTwinPeak,
 		FilterTypeUnknown
 	};
 
@@ -192,8 +192,9 @@ public:
 	{
 		AltPotGlobalCutoff,
 		AltPotGlobalResonance,
-		AltPotGlobalReverbSend,
+		AltPotGlobalFilterType,
 		AltPotGlobalVolumeTrim,
+		AltPotGlobalReverbSend,
 		AltPotGlobalPortamentoTime,
 		AltPotGlobalUnknown
 	};
@@ -357,9 +358,7 @@ private:
 	int m_nCutoff[CConfig::AllToneGenerators];
 	int m_nResonance[CConfig::AllToneGenerators];
 	unsigned m_nFilterType[CConfig::AllToneGenerators];
-	float32_t m_FilterCutoffSmooth[CConfig::AllToneGenerators];
-	float32_t m_FilterResonanceSmooth[CConfig::AllToneGenerators];
-	float32_t m_FilterState[CConfig::AllToneGenerators][4];
+	float32_t m_FilterState[CConfig::AllToneGenerators][12];
 	static const unsigned FilterCombBufferSize = 64;
 	float32_t m_FilterCombBuffer[CConfig::AllToneGenerators][FilterCombBufferSize];
 	unsigned m_FilterCombIndex[CConfig::AllToneGenerators];

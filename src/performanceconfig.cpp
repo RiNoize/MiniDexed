@@ -153,7 +153,7 @@ bool CPerformanceConfig::Load (void)
 		m_nResonance[nTG] = m_Properties.GetNumber (PropertyName, 0);
 
 		PropertyName.Format ("FilterType%u", nTG+1);
-		m_nFilterType[nTG] = m_Properties.GetNumber (PropertyName, 0);
+		m_nFilterType[nTG] = m_Properties.GetNumber (PropertyName, 1);
 
 		PropertyName.Format ("NoteLimitLow%u", nTG+1);
 		m_nNoteLimitLow[nTG] = m_Properties.GetNumber (PropertyName, 0);

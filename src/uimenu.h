@@ -135,6 +135,7 @@ private:
 	static void CopyTG (CUIMenu *pUIMenu, TMenuEvent Event);
 	static void SavePerformanceNewFile (CUIMenu *pUIMenu, TMenuEvent Event);
 	static void EditPerformanceBankNumber (CUIMenu *pUIMenu, TMenuEvent Event);
+	static void EditPerformanceFilterType (CUIMenu *pUIMenu, TMenuEvent Event);
 	static void EditMasterVolume (CUIMenu *pUIMenu, TMenuEvent Event);
 	
 	static std::string GetGlobalValueString (unsigned nParameter, int nValue);

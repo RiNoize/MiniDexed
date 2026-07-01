@@ -354,6 +354,7 @@ const CUIMenu::TMenuItem CUIMenu::s_PerformanceMenu[] =
 	{"Copy TG",	CopyTG, 0, 0},
 	{"Bank",	EditPerformanceBankNumber, 0, 0},
 	{"PCCH",	EditGlobalParameter,	0,	CMiniDexed::ParameterPerformanceSelectChannel},
+	{"Filter Type",	EditPerformanceFilterType, 0, 0},
 	{0}
 };
 
@@ -1158,17 +1159,15 @@ std::string CUIMenu::FormatOverviewTGParameterValue (unsigned nTGParameter, int 
 	case CMiniDexed::TGParameterFilterType:
 		switch (nValue)
 		{
-		case CMiniDexed::FilterTypeClassic:	return "CLA";
 		case CMiniDexed::FilterTypeOff:		return "OFF";
-		case CMiniDexed::FilterTypeDirtyLP:	return "DLP";
-		case CMiniDexed::FilterTypeAcidLP:	return "ALP";
-		case CMiniDexed::FilterTypeNasalBP:	return "NBP";
-		case CMiniDexed::FilterTypeTelephone:	return "TEL";
-		case CMiniDexed::FilterTypeHollowNotch:	return "HOL";
-		case CMiniDexed::FilterTypeCombMetal:	return "CMB";
-		case CMiniDexed::FilterTypeStepLP:	return "SLP";
-		case CMiniDexed::FilterTypeStepBP:	return "SBP";
-		case CMiniDexed::FilterTypeStepMetal:	return "SMT";
+		case CMiniDexed::FilterTypeClassic:	return "CLA";
+		case CMiniDexed::FilterTypeZynLP2P:	return "ZLP";
+		case CMiniDexed::FilterTypeZynBP2P:	return "ZBP";
+		case CMiniDexed::FilterTypeZynHP2P:	return "ZHP";
+		case CMiniDexed::FilterTypeZynNotch:	return "ZNT";
+		case CMiniDexed::FilterTypeZynPeak:	return "ZPK";
+		case CMiniDexed::FilterTypeDDWarmLPF:	return "WLP";
+		case CMiniDexed::FilterTypeTwinPeak:	return "TWN";
 		default:				return "???";
 		}
 
@@ -2275,17 +2274,15 @@ string CUIMenu::ToFilterType (int nValue)
 {
 	switch (nValue)
 	{
-	case CMiniDexed::FilterTypeClassic:	return "Classic";
 	case CMiniDexed::FilterTypeOff:		return "Off";
-	case CMiniDexed::FilterTypeDirtyLP:	return "Dirty LP";
-	case CMiniDexed::FilterTypeAcidLP:	return "Acid LP";
-	case CMiniDexed::FilterTypeNasalBP:	return "Nasal BP";
-	case CMiniDexed::FilterTypeTelephone:	return "Telephone";
-	case CMiniDexed::FilterTypeHollowNotch:	return "Hollow";
-	case CMiniDexed::FilterTypeCombMetal:	return "Comb Metal";
-	case CMiniDexed::FilterTypeStepLP:	return "Step LP";
-	case CMiniDexed::FilterTypeStepBP:	return "Step BP";
-	case CMiniDexed::FilterTypeStepMetal:	return "Step Metal";
+	case CMiniDexed::FilterTypeClassic:	return "Classic";
+	case CMiniDexed::FilterTypeZynLP2P:	return "Zyn LP 2P";
+	case CMiniDexed::FilterTypeZynBP2P:	return "Zyn BP 2P";
+	case CMiniDexed::FilterTypeZynHP2P:	return "Zyn HP 2P";
+	case CMiniDexed::FilterTypeZynNotch:	return "Zyn Notch";
+	case CMiniDexed::FilterTypeZynPeak:	return "Zyn Peak";
+	case CMiniDexed::FilterTypeDDWarmLPF:	return "DD Warm LPF";
+	case CMiniDexed::FilterTypeTwinPeak:	return "Twin Peak";
 	default:				return "?";
 	}
 }
@@ -3227,6 +3224,47 @@ void CUIMenu::CopyTG (CUIMenu *pUIMenu, TMenuEvent Event)
 				      pUIMenu->m_bCopyTGSelectingTo ? "To" : "From",
 				      Value.c_str (),
 				      true, true);
+}
+
+
+void CUIMenu::EditPerformanceFilterType (CUIMenu *pUIMenu, TMenuEvent Event)
+{
+	const TParameter &rParam = s_TGParameter[CMiniDexed::TGParameterFilterType];
+	int nValue = (int) pUIMenu->m_pMiniDexed->GetPerformanceFilterType ();
+
+	switch (Event)
+	{
+	case MenuEventUpdate:
+	case MenuEventUpdateParameter:
+		break;
+
+	case MenuEventStepDown:
+		nValue -= rParam.Increment;
+		if (nValue < rParam.Minimum)
+		{
+			nValue = rParam.Minimum;
+		}
+		pUIMenu->m_pMiniDexed->SetPerformanceFilterType ((unsigned) nValue);
+		break;
+
+	case MenuEventStepUp:
+		nValue += rParam.Increment;
+		if (nValue > rParam.Maximum)
+		{
+			nValue = rParam.Maximum;
+		}
+		pUIMenu->m_pMiniDexed->SetPerformanceFilterType ((unsigned) nValue);
+		break;
+
+	default:
+		return;
+	}
+
+	std::string Value = ToFilterType ((int) pUIMenu->m_pMiniDexed->GetPerformanceFilterType ());
+	pUIMenu->m_pUI->DisplayWrite ("Performance",
+				      "Filter Type",
+				      Value.c_str (),
+				      nValue > rParam.Minimum, nValue < rParam.Maximum);
 }
 
 
