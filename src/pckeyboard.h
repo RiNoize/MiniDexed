@@ -27,6 +27,7 @@
 #include <circle/types.h>
 
 class CMiniDexed;
+class CUserInterface;
 
 class CPCKeyboard : public CMIDIDevice
 {
@@ -35,6 +36,9 @@ public:
 	~CPCKeyboard (void);
 
 	void Process (boolean bPlugAndPlayUpdated);
+
+private:
+	void ShowStatus (const char *pLine1, const char *pLine2);
 
 private:
 	static void KeyStatusHandlerRaw (unsigned char ucModifiers, const unsigned char RawKeys[6]);
@@ -47,6 +51,15 @@ private:
 
 private:
 	CUSBKeyboardDevice * volatile m_pKeyboard;
+	CUserInterface *m_pUI;
+
+	volatile boolean m_bFoundMessagePending;
+	volatile boolean m_bNoKeyboardMessageShown;
+	volatile boolean m_bKeyMessagePending;
+	volatile u8 m_ucLastRawKey;
+	volatile u8 m_ucLastNote;
+	u64 m_nLastNoKeyboardTicks;
+	char m_DeviceNameFound[9];
 
 	u8 m_LastKeys[6];
 
