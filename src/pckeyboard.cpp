@@ -19,8 +19,11 @@
 //
 #include "pckeyboard.h"
 #include <circle/devicenameservice.h>
+#include <circle/logger.h>
 #include <circle/util.h>
 #include <assert.h>
+
+LOGMODULE ("pckeyboard");
 
 struct TKeyInfo
 {
@@ -78,20 +81,35 @@ CPCKeyboard::~CPCKeyboard (void)
 
 void CPCKeyboard::Process (boolean bPlugAndPlayUpdated)
 {
-	if (!bPlugAndPlayUpdated)
+	// Do not return immediately when bPlugAndPlayUpdated is false.
+	// A keyboard connected before boot can already be present in the
+	// device name service before the first visible plug-and-play update
+	// reaches this object. Probe while no keyboard is registered.
+	if (m_pKeyboard != 0)
 	{
 		return;
 	}
 
-	if (m_pKeyboard == 0)
+	static const char *DeviceNames[] =
+	{
+		"ukbd1",
+		"ukbd2",
+		"ukbd3",
+		"ukbd4"
+	};
+
+	for (unsigned i = 0; i < sizeof DeviceNames / sizeof DeviceNames[0]; i++)
 	{
 		m_pKeyboard =
-			(CUSBKeyboardDevice *) CDeviceNameService::Get ()->GetDevice ("ukbd1", FALSE);
+			(CUSBKeyboardDevice *) CDeviceNameService::Get ()->GetDevice (DeviceNames[i], FALSE);
 		if (m_pKeyboard != 0)
 		{
-			m_pKeyboard->RegisterKeyStatusHandlerRaw (KeyStatusHandlerRaw);
+			LOGNOTE ("PC keyboard found: %s%s", DeviceNames[i],
+				 bPlugAndPlayUpdated ? "" : " (boot/probe)");
 
+			m_pKeyboard->RegisterKeyStatusHandlerRaw (KeyStatusHandlerRaw);
 			m_pKeyboard->RegisterRemovedHandler (DeviceRemovedHandler);
+			return;
 		}
 	}
 }
