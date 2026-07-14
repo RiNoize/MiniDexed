@@ -4,18 +4,7 @@
 // MiniSynth Pi - A virtual analogue synthesizer for Raspberry Pi
 // Copyright (C) 2017-2020  R. Stange <rsta2@o2online.de>
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+// MiniDexed FIX44E - PCKeyboard robust USB PnP rebind/debug
 //
 #include "pckeyboard.h"
 #include <circle/devicenameservice.h>
@@ -64,13 +53,14 @@ static TKeyInfo KeyTable[] =
 CPCKeyboard *CPCKeyboard::s_pThis = 0;
 
 CPCKeyboard::CPCKeyboard (CMiniDexed *pSynthesizer, CConfig *pConfig, CUserInterface *pUI)
-:	CMIDIDevice (pSynthesizer, pConfig, pUI),
-	m_pKeyboard (0)
+: CMIDIDevice (pSynthesizer, pConfig, pUI),
+  m_pKeyboard (0)
 {
 	s_pThis = this;
 
 	memset (m_LastKeys, 0, sizeof m_LastKeys);
 
+	// Keep the original device request so Circle loads the keyboard driver.
 	AddDevice ("ukbd1");
 }
 
@@ -81,11 +71,12 @@ CPCKeyboard::~CPCKeyboard (void)
 
 void CPCKeyboard::Process (boolean bPlugAndPlayUpdated)
 {
-	// Do not return immediately when bPlugAndPlayUpdated is false.
-	// A keyboard connected before boot can already be present in the
-	// device name service before the first visible plug-and-play update
-	// reaches this object. Probe while no keyboard is registered.
-	if (m_pKeyboard != 0)
+	// MiniDexed/Circle can re-enumerate devices when another USB device is
+	// connected to the same hub. The original code returned immediately while
+	// m_pKeyboard was non-null, which can leave us bound to a stale keyboard
+	// object after a USB PnP change. Always re-scan on PnP updates, and also
+	// probe while no keyboard is registered.
+	if (m_pKeyboard != 0 && !bPlugAndPlayUpdated)
 	{
 		return;
 	}
@@ -95,23 +86,54 @@ void CPCKeyboard::Process (boolean bPlugAndPlayUpdated)
 		"ukbd1",
 		"ukbd2",
 		"ukbd3",
-		"ukbd4"
+		"ukbd4",
+		"ukbd5",
+		"ukbd6",
+		"ukbd7",
+		"ukbd8"
 	};
+
+	CUSBKeyboardDevice *pFoundKeyboard = 0;
+	const char *pFoundName = 0;
 
 	for (unsigned i = 0; i < sizeof DeviceNames / sizeof DeviceNames[0]; i++)
 	{
-		m_pKeyboard =
+		pFoundKeyboard =
 			(CUSBKeyboardDevice *) CDeviceNameService::Get ()->GetDevice (DeviceNames[i], FALSE);
-		if (m_pKeyboard != 0)
+		if (pFoundKeyboard != 0)
 		{
-			LOGNOTE ("PC keyboard found: %s%s", DeviceNames[i],
-				 bPlugAndPlayUpdated ? "" : " (boot/probe)");
-
-			m_pKeyboard->RegisterKeyStatusHandlerRaw (KeyStatusHandlerRaw);
-			m_pKeyboard->RegisterRemovedHandler (DeviceRemovedHandler);
-			return;
+			pFoundName = DeviceNames[i];
+			break;
 		}
 	}
+
+	if (pFoundKeyboard == 0)
+	{
+		if (m_pKeyboard != 0)
+		{
+			LOGNOTE ("PC keyboard lost after USB PnP update");
+			m_pKeyboard = 0;
+			memset (m_LastKeys, 0, sizeof m_LastKeys);
+		}
+		return;
+	}
+
+	if (pFoundKeyboard != m_pKeyboard)
+	{
+		LOGNOTE ("PC keyboard found/rebound: %s%s", pFoundName,
+			 bPlugAndPlayUpdated ? " (PnP)" : " (boot/probe)");
+		m_pKeyboard = pFoundKeyboard;
+		memset (m_LastKeys, 0, sizeof m_LastKeys);
+	}
+	else if (bPlugAndPlayUpdated)
+	{
+		LOGNOTE ("PC keyboard refresh after USB PnP: %s", pFoundName);
+	}
+
+	// Register/re-register after PnP. Circle stores a function pointer handler,
+	// so this is intended to refresh the callback after hub reconfiguration.
+	m_pKeyboard->RegisterKeyStatusHandlerRaw (KeyStatusHandlerRaw);
+	m_pKeyboard->RegisterRemovedHandler (DeviceRemovedHandler);
 }
 
 void CPCKeyboard::KeyStatusHandlerRaw (unsigned char ucModifiers, const unsigned char RawKeys[6])
@@ -128,6 +150,7 @@ void CPCKeyboard::KeyStatusHandlerRaw (unsigned char ucModifiers, const unsigned
 			u8 ucKeyNumber = GetKeyNumber (ucKeyCode);
 			if (ucKeyNumber != 0)
 			{
+				LOGNOTE ("PC key off: raw=%u note=%u", ucKeyCode, ucKeyNumber);
 				u8 NoteOff[] = {0x80, ucKeyNumber, 0};
 				s_pThis->MIDIMessageHandler (NoteOff, sizeof NoteOff);
 			}
@@ -144,8 +167,13 @@ void CPCKeyboard::KeyStatusHandlerRaw (unsigned char ucModifiers, const unsigned
 			u8 ucKeyNumber = GetKeyNumber (ucKeyCode);
 			if (ucKeyNumber != 0)
 			{
+				LOGNOTE ("PC key on: raw=%u note=%u", ucKeyCode, ucKeyNumber);
 				u8 NoteOn[] = {0x90, ucKeyNumber, 100};
 				s_pThis->MIDIMessageHandler (NoteOn, sizeof NoteOn);
+			}
+			else
+			{
+				LOGNOTE ("PC key unmapped: raw=%u", ucKeyCode);
 			}
 		}
 	}
@@ -200,5 +228,8 @@ boolean CPCKeyboard::FindByte (const u8 *pBuffer, u8 ucByte, unsigned nLength)
 void CPCKeyboard::DeviceRemovedHandler (CDevice *pDevice, void *pContext)
 {
 	assert (s_pThis != 0);
+
+	LOGNOTE ("PC keyboard removed");
 	s_pThis->m_pKeyboard = 0;
+	memset (s_pThis->m_LastKeys, 0, sizeof s_pThis->m_LastKeys);
 }
