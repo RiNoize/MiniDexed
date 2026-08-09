@@ -68,6 +68,14 @@ private:
 	void LCDWrite (const char *pString);		// Print to optional HD44780 display
 	void EncoderEventHandler (CKY040::TEvent Event);
 	static void EncoderEventStub (CKY040::TEvent Event, void *pParam);
+
+	// Encoder 2 controls only the lower/extended Performance mixer.
+	void Encoder2EventHandler (CKY040::TEvent Event);
+	static void Encoder2EventStub (CKY040::TEvent Event, void *pParam);
+	void DisplayExtendedMixer (void);
+	void AdjustExtendedMixerValue (int nDirection);
+	void SelectExtendedMixerTG (int nDirection);
+	void SelectNextExtendedMixerParameter (void);
 	void UIButtonsEventHandler (CUIButton::BtnEvent Event);
 	static void UIButtonsEventStub (CUIButton::BtnEvent Event, void *pParam);
 	void UISetMIDIButtonChannel (unsigned uCh);
@@ -91,6 +99,12 @@ private:
 
 	CKY040 *m_pRotaryEncoder;
 	bool m_bSwitchPressed;
+
+	CKY040 *m_pRotaryEncoder2;
+	bool m_bSwitchPressed2;
+	bool m_bEncoder2TurnedWhilePressed;
+	unsigned m_nExtendedMixerTG;
+	unsigned m_nExtendedMixerParameter;
 
 	CUIMenu m_Menu;
 };
