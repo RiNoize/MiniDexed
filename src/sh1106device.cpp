@@ -249,7 +249,8 @@ void CSSD1306Device::DrawChar (char chChar, u8 nCursorX, u8 nCursorY,
 			       bool bInverted, bool bDoubleWidth)
 {
 	const size_t nRowOffset = nCursorY * m_nWidth * 2;
-	const size_t nColumnOffset = nCursorX * (bDoubleWidth ? 12 : 6) + 4;
+	// 16 columns on 128 pixels = exactly 8 pixels per character.
+	const size_t nColumnOffset = nCursorX * (bDoubleWidth ? 16 : 8);
 	u8 *pFrameBuffer = m_FrameBuffers[m_nCurrentFrameBuffer].FrameBuffer;
 
 	if (chChar == '\xFF')
@@ -261,11 +262,16 @@ void CSSD1306Device::DrawChar (char chChar, u8 nCursorX, u8 nCursorY,
 		chChar = ' ';
 	}
 
-	for (u8 i = 0; i < 6; ++i)
-	{
-		u16 nFontColumn = FontDouble[static_cast<u8> (chChar - ' ')][i];
+	// Stretch the original 6-pixel-wide glyph to 8 pixels.
+	// Two interior source columns are repeated so the glyph itself gets wider.
+	static const u8 ColumnMap[8] = {0, 1, 1, 2, 3, 4, 4, 5};
 
-		if (i > 0 && bInverted)
+	for (u8 i = 0; i < 8; ++i)
+	{
+		const u8 nSourceColumn = ColumnMap[i];
+		u16 nFontColumn = FontDouble[static_cast<u8> (chChar - ' ')][nSourceColumn];
+
+		if (nSourceColumn > 0 && bInverted)
 		{
 			nFontColumn ^= 0x3FFF;
 		}

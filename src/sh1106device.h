@@ -19,8 +19,9 @@
 #include <circle/types.h>
 #include <display/chardevice.h>
 
-// 20 characters fit comfortably in 128 pixels using the 6-pixel font.
-#define SH1106_COLUMNS 20
+// 16 characters across 128 pixels: 8 pixels per character.
+// DrawChar() stretches the original 6-pixel glyph to 8 pixels.
+#define SH1106_COLUMNS 16
 
 // IMPORTANT: The class intentionally keeps the CSSD1306Device name.
 // This makes it a drop-in replacement for MiniDexed's existing SSD1306

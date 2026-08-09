@@ -57,6 +57,10 @@ public:
 	// +----------------+
 	void DisplayWrite (const char *pMenu, const char *pParam, const char *pValue,
 			   bool bArrowDown, bool bArrowUp);
+
+	// Write only rows 3 and 4 of the 128x64 SH1106.
+	// Rows 1 and 2 remain controlled by the original MiniDexed UI.
+	void DisplayWriteLower (const char *pLine3, const char *pLine4);
 	// To be called from the MIDI device on reception of a MIDI CC message
 	void UIMIDICmdHandler (unsigned nMidiCh, unsigned nMidiType, unsigned nMidiData1, unsigned nMidiData2);
 

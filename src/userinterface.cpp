@@ -24,7 +24,6 @@
 #include <circle/startup.h>
 #include <string.h>
 #include <assert.h>
-
 LOGMODULE ("ui");
 
 CUserInterface::CUserInterface (CMiniDexed *pMiniDexed, CGPIOManager *pGPIOManager, CI2CMaster *pI2CMaster, CSPIMaster *pSPIMaster, CConfig *pConfig)
@@ -41,7 +40,6 @@ CUserInterface::CUserInterface (CMiniDexed *pMiniDexed, CGPIOManager *pGPIOManag
 	m_Menu (this, pMiniDexed, pConfig)
 {
 }
-
 CUserInterface::~CUserInterface (void)
 {
 	delete m_pRotaryEncoder;
@@ -53,7 +51,6 @@ CUserInterface::~CUserInterface (void)
 bool CUserInterface::Initialize (void)
 {
 	assert (m_pConfig);
-
 	if (m_pConfig->GetLCDEnabled ())
 	{
 		unsigned i2caddr = m_pConfig->GetLCDI2CAddress ();
@@ -78,7 +75,6 @@ bool CUserInterface::Initialize (void)
 				LOGDBG("LCD: ST7789 Enabled but SPI Initialisation Failed");
 				return false;
 			}
-
 			unsigned long nSPIClock = 1000 * m_pConfig->GetSPIClockKHz();
 			unsigned nSPIMode = m_pConfig->GetSPIMode();
 			unsigned nCPHA = (nSPIMode & 1) ? 1 : 0;
@@ -123,13 +119,13 @@ bool CUserInterface::Initialize (void)
 		else if (i2caddr == 0)
 		{
 			m_pHD44780 = new CHD44780Device (m_pConfig->GetLCDColumns (), m_pConfig->GetLCDRows (),
-							 m_pConfig->GetLCDPinData4 (),
-							 m_pConfig->GetLCDPinData5 (),
-							 m_pConfig->GetLCDPinData6 (),
-							 m_pConfig->GetLCDPinData7 (),
-							 m_pConfig->GetLCDPinEnable (),
-							 m_pConfig->GetLCDPinRegisterSelect (),
-							 m_pConfig->GetLCDPinReadWrite ());
+								 m_pConfig->GetLCDPinData4 (),
+								 m_pConfig->GetLCDPinData5 (),
+								 m_pConfig->GetLCDPinData6 (),
+								 m_pConfig->GetLCDPinData7 (),
+								 m_pConfig->GetLCDPinEnable (),
+								 m_pConfig->GetLCDPinRegisterSelect (),
+								 m_pConfig->GetLCDPinReadWrite ());
 			if (!m_pHD44780->Initialize ())
 			{
 				LOGDBG("LCD: HD44780 initialization failed");
@@ -151,7 +147,6 @@ bool CUserInterface::Initialize (void)
 			m_pLCD = m_pHD44780;
 		}
 		assert (m_pLCD);
-
 		m_pLCDBuffered = new CWriteBufferDevice (m_pLCD);
 		assert (m_pLCDBuffered);
 		// clear sceen and go to top left corner
@@ -170,7 +165,6 @@ bool CUserInterface::Initialize (void)
 	{
 		return false;
 	}
-
 	m_pUIButtons->RegisterEventHandler (UIButtonsEventStub, this);
 	UISetMIDIButtonChannel (m_pConfig->GetMIDIButtonCh ());
 
@@ -184,7 +178,6 @@ bool CUserInterface::Initialize (void)
 					       m_pGPIOManager,
 					       m_pConfig->GetEncoderDetents ());
 		assert (m_pRotaryEncoder);
-
 		if (!m_pRotaryEncoder->Initialize ())
 		{
 			return false;
@@ -196,6 +189,14 @@ bool CUserInterface::Initialize (void)
 	}
 
 	m_Menu.EventHandler (CUIMenu::MenuEventUpdate);
+
+	// SH1106 16x4 test: rows 1-2 stay with the original MiniDexed UI.
+	// Rows 3-4 are reserved for our extended UI.
+	if (m_pConfig->GetSSD1306LCDI2CAddress () != 0
+	 && m_pConfig->GetSSD1306LCDHeight () == 64)
+	{
+		DisplayWriteLower ("EXTENDED UI", "SH1106 16x4");
+	}
 
 	return true;
 }
@@ -216,7 +217,6 @@ void CUserInterface::ParameterChanged (void)
 {
 	m_Menu.EventHandler (CUIMenu::MenuEventUpdateParameter);
 }
-
 void CUserInterface::DisplayChanged (void)
 {
 	m_Menu.EventHandler (CUIMenu::MenuEventUpdate);
@@ -231,7 +231,6 @@ void CUserInterface::ShowAltPotController (unsigned nTG, const char *pParameterN
 {
 	m_Menu.ShowAltPotController (nTG, pParameterName, nValue);
 }
-
 void CUserInterface::DisplayWrite (const char *pMenu, const char *pParam, const char *pValue,
 				   bool bArrowDown, bool bArrowUp)
 {
@@ -254,7 +253,6 @@ void CUserInterface::DisplayWrite (const char *pMenu, const char *pParam, const 
 	}
 
 	Msg.Append (pMenu);
-
 	// second line
 	CString Value (" ");
 	if (bArrowDown)
@@ -278,11 +276,25 @@ void CUserInterface::DisplayWrite (const char *pMenu, const char *pParam, const 
 	}
 
 	Msg.Append (Value);
-
 	if (Value.GetLength () < m_pConfig->GetLCDColumns ())
 	{
 		Msg.Append ("\x1B[K");		// clear end of line
 	}
+
+	LCDWrite (Msg);
+}
+
+void CUserInterface::DisplayWriteLower (const char *pLine3, const char *pLine4)
+{
+	assert (pLine3);
+	assert (pLine4);
+
+	// 1-based terminal coordinates. Do not home or clear the whole display.
+	CString Msg ("\x1B[3;1H\x1B[?25l");
+	Msg.Append (pLine3);
+	Msg.Append ("\x1B[K\x1B[4;1H");
+	Msg.Append (pLine4);
+	Msg.Append ("\x1B[K");
 
 	LCDWrite (Msg);
 }
@@ -306,7 +318,6 @@ void CUserInterface::EncoderEventHandler (CKY040::TEvent Event)
 	case CKY040::EventSwitchUp:
 		m_bSwitchPressed = false;
 		break;
-
 	case CKY040::EventClockwise:
 		if (m_bSwitchPressed) {
 			// We must reset the encoder switch button to prevent events from being
@@ -319,7 +330,6 @@ void CUserInterface::EncoderEventHandler (CKY040::TEvent Event)
 			m_Menu.EventHandler(CUIMenu::MenuEventStepUp);
 		}
 		break;
-
 	case CKY040::EventCounterclockwise:
 		if (m_bSwitchPressed) {
 			m_pUIButtons->ResetButton(m_pConfig->GetButtonPinShortcut());
@@ -343,7 +353,6 @@ void CUserInterface::EncoderEventHandler (CKY040::TEvent Event)
 		break;
 	}
 }
-
 void CUserInterface::EncoderEventStub (CKY040::TEvent Event, void *pParam)
 {
 	CUserInterface *pThis = static_cast<CUserInterface *> (pParam);
@@ -363,7 +372,6 @@ void CUserInterface::UIButtonsEventHandler (CUIButton::BtnEvent Event)
 	case CUIButton::BtnEventNext:
 		m_Menu.EventHandler (CUIMenu::MenuEventStepUp);
 		break;
-
 	case CUIButton::BtnEventBack:
 		m_Menu.EventHandler (CUIMenu::MenuEventBack);
 		break;
@@ -383,7 +391,6 @@ void CUserInterface::UIButtonsEventHandler (CUIButton::BtnEvent Event)
 	case CUIButton::BtnEventPgmDown:
 		m_Menu.EventHandler (CUIMenu::MenuEventPgmDown);
 		break;
-
 	case CUIButton::BtnEventBankUp:
 		m_Menu.EventHandler (CUIMenu::MenuEventBankUp);
 		break;
@@ -403,7 +410,6 @@ void CUserInterface::UIButtonsEventHandler (CUIButton::BtnEvent Event)
 	case CUIButton::BtnEventTG1:
 		m_Menu.EventHandler (CUIMenu::MenuEventTG1);
 		break;
-
 	case CUIButton::BtnEventTG2:
 		m_Menu.EventHandler (CUIMenu::MenuEventTG2);
 		break;
@@ -423,7 +429,6 @@ void CUserInterface::UIButtonsEventHandler (CUIButton::BtnEvent Event)
 	case CUIButton::BtnEventTG6:
 		m_Menu.EventHandler (CUIMenu::MenuEventTG6);
 		break;
-
 	case CUIButton::BtnEventTG7:
 		m_Menu.EventHandler (CUIMenu::MenuEventTG7);
 		break;
@@ -443,7 +448,6 @@ void CUserInterface::UIButtonsEventHandler (CUIButton::BtnEvent Event)
 	case CUIButton::BtnEventPerformance:
 		m_Menu.EventHandler (CUIMenu::MenuEventPerformance);
 		break;
-
 	case CUIButton::BtnEventTGVoice:
 		m_Menu.EventHandler (CUIMenu::MenuEventTGVoice);
 		break;
@@ -463,7 +467,6 @@ void CUserInterface::UIButtonsEventHandler (CUIButton::BtnEvent Event)
 	case CUIButton::BtnEventTGReverbSend:
 		m_Menu.EventHandler (CUIMenu::MenuEventTGReverbSend);
 		break;
-
 	case CUIButton::BtnEventTGDetune:
 		m_Menu.EventHandler (CUIMenu::MenuEventTGDetune);
 		break;
@@ -483,7 +486,6 @@ void CUserInterface::UIButtonsEventHandler (CUIButton::BtnEvent Event)
 	case CUIButton::BtnEventTGPitchBend:
 		m_Menu.EventHandler (CUIMenu::MenuEventTGPitchBend);
 		break;
-
 	case CUIButton::BtnEventTGPortamento:
 		m_Menu.EventHandler (CUIMenu::MenuEventTGPortamento);
 		break;
@@ -499,7 +501,6 @@ void CUserInterface::UIButtonsEventHandler (CUIButton::BtnEvent Event)
 	case CUIButton::BtnEventTGChannel:
 		m_Menu.EventHandler (CUIMenu::MenuEventTGChannel);
 		break;
-
 	case CUIButton::BtnEventTGEditVoice:
 		m_Menu.EventHandler (CUIMenu::MenuEventTGEditVoice);
 		break;
@@ -511,7 +512,6 @@ void CUserInterface::UIButtonsEventHandler (CUIButton::BtnEvent Event)
 	case CUIButton::BtnEventAltPot:
 		m_Menu.EventHandler (CUIMenu::MenuEventAltPot);
 		break;
-
 	case CUIButton::BtnEventAltPotPrev:
 		m_Menu.EventHandler (CUIMenu::MenuEventAltPotPrev);
 		break;
@@ -519,7 +519,6 @@ void CUserInterface::UIButtonsEventHandler (CUIButton::BtnEvent Event)
 	case CUIButton::BtnEventAltPotNext:
 		m_Menu.EventHandler (CUIMenu::MenuEventAltPotNext);
 		break;
-
 	case CUIButton::BtnEventAltPotMode:
 		m_Menu.EventHandler (CUIMenu::MenuEventAltPotMode);
 		break;
@@ -536,7 +535,6 @@ void CUserInterface::UIButtonsEventStub (CUIButton::BtnEvent Event, void *pParam
 
 	pThis->UIButtonsEventHandler (Event);
 }
-
 void CUserInterface::UIMIDICmdHandler (unsigned nMidiCh, unsigned nMidiType, unsigned nMidiData1, unsigned nMidiData2)
 {
 	if (m_nMIDIButtonCh == CMIDIDevice::Disabled)
@@ -549,13 +547,12 @@ void CUserInterface::UIMIDICmdHandler (unsigned nMidiCh, unsigned nMidiType, uns
 		// Message not on the MIDI Button channel and MIDI buttons not in OMNI mode
 		return;
 	}
-	
+
 	if (m_pUIButtons)
 	{
 		m_pUIButtons->BtnMIDICmdHandler (nMidiType, nMidiData1, nMidiData2);
 	}
 }
-
 void CUserInterface::UISetMIDIButtonChannel (unsigned uCh)
 {
 	// Mirrors the logic in Performance Config for handling MIDI channel configuration
