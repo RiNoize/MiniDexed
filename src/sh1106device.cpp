@@ -20,6 +20,7 @@
 #include <circle/types.h>
 #include <circle/util.h>
 #include <assert.h>
+#include <string.h>
 #include <display/font6x8.h>
 
 namespace
@@ -265,24 +266,24 @@ void CSSD1306Device::DrawChar (char chChar, u8 nCursorX, u8 nCursorY,
 		chChar = ' ';
 	}
 
-	// Clear the complete cell first so the left/right margins stay clean.
+	// Clear the complete cell first.  For an inverted character, fill the
+	// whole 8x16 cell so the selection looks like a true reverse-video block.
 	for (size_t i = 0; i < nCellWidth; ++i)
 	{
 		const size_t nOffset = nRowOffset + nColumnOffset + i;
-		pFrameBuffer[nOffset] = 0;
-		pFrameBuffer[nOffset + m_nWidth] = 0;
+		pFrameBuffer[nOffset] = bInverted ? 0xFF : 0x00;
+		pFrameBuffer[nOffset + m_nWidth] = bInverted ? 0xFF : 0x00;
 	}
 
 	for (u8 i = 0; i < 6; ++i)
 	{
 		u16 nFontColumn = FontDouble[static_cast<u8> (chChar - ' ')][i];
-
-		if (i > 0 && bInverted)
-		{
-			nFontColumn ^= 0x3FFF;
-		}
-
 		nFontColumn <<= 2;
+
+		if (bInverted)
+		{
+			nFontColumn = static_cast<u16> (~nFontColumn);
+		}
 
 		const size_t nOffset = nRowOffset + nColumnOffset
 			+ (bDoubleWidth ? 2 + i * 2 : 1 + i);
@@ -326,6 +327,31 @@ void CSSD1306Device::Print (const char *pText, u8 nCursorX, u8 nCursorY,
 		while (nCursorX < SH1106_COLUMNS)
 		{
 			DrawChar (' ', nCursorX++, nCursorY);
+		}
+	}
+
+	if (bImmediate)
+	{
+		WriteFrameBuffer (true);
+	}
+}
+
+void CSSD1306Device::DrawLowerLines (const char *pLine3, const char *pLine4,
+				      int nInvertLine, unsigned nInvertStart,
+				      unsigned nInvertLength, bool bImmediate)
+{
+	const char *Lines[2] = {pLine3 ? pLine3 : "", pLine4 ? pLine4 : ""};
+
+	for (unsigned nLine = 0; nLine < 2; ++nLine)
+	{
+		const size_t nLength = strlen (Lines[nLine]);
+		for (unsigned nColumn = 0; nColumn < SH1106_COLUMNS; ++nColumn)
+		{
+			const char ch = nColumn < nLength ? Lines[nLine][nColumn] : ' ';
+			const bool bInvert = (int) nLine == nInvertLine
+				&& nColumn >= nInvertStart
+				&& nColumn < nInvertStart + nInvertLength;
+			DrawChar (ch, nColumn, nLine + 2, bInvert, false);
 		}
 	}
 

@@ -32,6 +32,7 @@
 #include <circle/writebuffer.h>
 #include <circle/i2cmaster.h>
 #include <circle/spimaster.h>
+#include <circle/timer.h>
 
 class CMiniDexed;
 class CUserInterface
@@ -72,10 +73,12 @@ private:
 	// Encoder 2 controls only the lower/extended Performance mixer.
 	void Encoder2EventHandler (CKY040::TEvent Event);
 	static void Encoder2EventStub (CKY040::TEvent Event, void *pParam);
+	static void ExtendedBlinkTimerHandler (TKernelTimerHandle hTimer, void *pParam, void *pContext);
+	void ArmExtendedBlinkTimer (void);
 	void DisplayExtendedMixer (void);
 	void AdjustExtendedMixerValue (int nDirection);
 	void SelectExtendedMixerTG (int nDirection);
-	void SelectNextExtendedMixerParameter (void);
+	void SelectExtendedMixerParameter (int nDirection);
 	void UIButtonsEventHandler (CUIButton::BtnEvent Event);
 	static void UIButtonsEventStub (CUIButton::BtnEvent Event, void *pParam);
 	void UISetMIDIButtonChannel (unsigned uCh);
@@ -102,9 +105,13 @@ private:
 
 	CKY040 *m_pRotaryEncoder2;
 	bool m_bSwitchPressed2;
-	bool m_bEncoder2TurnedWhilePressed;
+	bool m_bEncoder2LongPressHandled;
+	bool m_bExtendedParameterSelect;
+	bool m_bExtendedBlinkOn;
+	bool m_bExtendedRedrawPending;
 	unsigned m_nExtendedMixerTG;
 	unsigned m_nExtendedMixerParameter;
+	unsigned m_nExtendedLastPerformanceID;
 
 	CUIMenu m_Menu;
 };

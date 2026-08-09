@@ -20,7 +20,7 @@
 #include <display/chardevice.h>
 
 // 16 characters across 128 pixels: 8 pixels per character.
-// DrawChar() stretches the original 6-pixel glyph to 8 pixels.
+// DrawChar() keeps the original 6-pixel glyph centered in an 8-pixel cell.
 #define SH1106_COLUMNS 16
 
 // IMPORTANT: The class intentionally keeps the CSSD1306Device name.
@@ -35,6 +35,12 @@ public:
 	~CSSD1306Device (void);
 
 	boolean Initialize (void);
+
+	// Draw rows 3 and 4 directly, optionally inverting one character range.
+	// nInvertLine: -1 = none, 0 = row 3, 1 = row 4.
+	void DrawLowerLines (const char *pLine3, const char *pLine4,
+			     int nInvertLine = -1, unsigned nInvertStart = 0,
+			     unsigned nInvertLength = 0, bool bImmediate = true);
 
 private:
 	void DevClearCursor (void) override;
