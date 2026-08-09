@@ -19,13 +19,14 @@
 //
 #ifndef _userinterface_h
 #define _userinterface_h
-
 #include "config.h"
 #include "uimenu.h"
 #include "uibuttons.h"
 #include <sensor/ky040.h>
 #include <display/hd44780device.h>
-#include <display/ssd1306device.h>
+// SH1106 compatibility driver for this branch. It exposes the same
+// CSSD1306Device interface expected by the existing MiniDexed UI code.
+#include "sh1106device.h"
 #include <display/st7789device.h>
 #include <circle/gpiomanager.h>
 #include <circle/writebuffer.h>
@@ -33,7 +34,6 @@
 #include <circle/spimaster.h>
 
 class CMiniDexed;
-
 class CUserInterface
 {
 public:
@@ -46,7 +46,6 @@ public:
 
 	void ParameterChanged (void);
 	void DisplayChanged (void);
-
 	// Show the existing voice-edit menu item for a raw DX7 voice data element.
 	void ShowVoiceDataElement (unsigned nTG, unsigned nVoiceDataElement, unsigned nValue);
 	void ShowAltPotController (unsigned nTG, const char *pParameterName, int nValue);
@@ -58,13 +57,11 @@ public:
 	// +----------------+
 	void DisplayWrite (const char *pMenu, const char *pParam, const char *pValue,
 			   bool bArrowDown, bool bArrowUp);
-
 	// To be called from the MIDI device on reception of a MIDI CC message
 	void UIMIDICmdHandler (unsigned nMidiCh, unsigned nMidiType, unsigned nMidiData1, unsigned nMidiData2);
 
 private:
 	void LCDWrite (const char *pString);		// Print to optional HD44780 display
-
 	void EncoderEventHandler (CKY040::TEvent Event);
 	static void EncoderEventStub (CKY040::TEvent Event, void *pParam);
 	void UIButtonsEventHandler (CUIButton::BtnEvent Event);
@@ -77,14 +74,13 @@ private:
 	CI2CMaster *m_pI2CMaster;
 	CSPIMaster *m_pSPIMaster;
 	CConfig *m_pConfig;
-
 	CCharDevice    *m_pLCD;
 	CHD44780Device *m_pHD44780;
 	CSSD1306Device *m_pSSD1306;
 	CST7789Display *m_pST7789Display;
 	CST7789Device  *m_pST7789;
 	CWriteBufferDevice *m_pLCDBuffered;
-	
+
 	CUIButtons *m_pUIButtons;
 
 	unsigned m_nMIDIButtonCh;
@@ -94,5 +90,4 @@ private:
 
 	CUIMenu m_Menu;
 };
-
 #endif
