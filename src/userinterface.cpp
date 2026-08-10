@@ -57,11 +57,42 @@ namespace
 
 	static bool LooksLikeLegacyPerformanceGridLine (const char *pText)
 	{
-		if (!pText || strlen (pText) != 15)
+		if (!pText)
 		{
 			return false;
 		}
-		return pText[3] == ' ' && pText[7] == ' ' && pText[11] == ' ';
+
+		// The old 1602 Performance overview uses four fields separated by one
+		// space.  Depending on the parameter each field is 2 or 3 characters:
+		// PAN can be "-7 +7 -2 +2" (11 chars), while Voice/Volume use
+		// "AAA BBB CCC DDD" (15 chars).  Accept every 2/3-character
+		// combination so none of the legacy page-2 variants reaches rows 1-2.
+		const size_t nLen = strlen (pText);
+		if (nLen < 11 || nLen > 15)
+		{
+			return false;
+		}
+
+		for (unsigned w0 = 2; w0 <= 3; ++w0)
+		for (unsigned w1 = 2; w1 <= 3; ++w1)
+		for (unsigned w2 = 2; w2 <= 3; ++w2)
+		for (unsigned w3 = 2; w3 <= 3; ++w3)
+		{
+			const size_t p1 = w0;
+			const size_t p2 = p1 + 1 + w1;
+			const size_t p3 = p2 + 1 + w2;
+			const size_t nExpected = p3 + 1 + w3;
+
+			if (nExpected == nLen
+			 && pText[p1] == ' '
+			 && pText[p2] == ' '
+			 && pText[p3] == ' ')
+			{
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	static void ShortVoice3 (const std::string &Name, char Result[4])
@@ -763,22 +794,25 @@ void CUserInterface::Encoder2EventHandler (CKY040::TEvent Event)
 		break;
 
 	case CKY040::EventSwitchUp:
-		if (m_bSwitchPressed2 && !m_bEncoder2LongPressHandled)
-		{
-			if (m_bExtendedParameterSelect)
-			{
-				// Short click confirms the currently displayed parameter.
-				m_bExtendedParameterSelect = false;
-				m_bExtendedBlinkOn = true;
-				DisplayExtendedMixer ();
-			}
-			else
-			{
-				// Normal mode: short click advances TG1 -> ... -> TG8.
-				SelectExtendedMixerTG (+1);
-			}
-		}
+		// Low-level release is only used to clear the hold state.  Short-click
+		// actions are handled by Circle's debounced EventSwitchClick below.
 		m_bSwitchPressed2 = false;
+		m_bEncoder2LongPressHandled = false;
+		break;
+
+	case CKY040::EventSwitchClick:
+		if (m_bExtendedParameterSelect)
+		{
+			// Short click confirms the currently displayed parameter.
+			m_bExtendedParameterSelect = false;
+			m_bExtendedBlinkOn = true;
+			DisplayExtendedMixer ();
+		}
+		else
+		{
+			// Normal mode: short click advances TG1 -> ... -> TG8.
+			SelectExtendedMixerTG (+1);
+		}
 		break;
 
 	case CKY040::EventClockwise:
