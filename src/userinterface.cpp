@@ -302,12 +302,19 @@ void CUserInterface::Process (void)
 void CUserInterface::ParameterChanged (void)
 {
 	m_Menu.EventHandler (CUIMenu::MenuEventUpdateParameter);
-	DisplayExtendedMixer ();
+
+	// Do NOT redraw the OLED synchronously here. Loading a Performance calls
+	// ParameterChanged() many times (for the parameters of all TGs). A full
+	// I2C redraw on every call makes Performance loading take several seconds.
+	// Coalesce all those notifications into one redraw in Process().
+	m_bExtendedRedrawPending = true;
 }
 void CUserInterface::DisplayChanged (void)
 {
 	m_Menu.EventHandler (CUIMenu::MenuEventUpdate);
-	DisplayExtendedMixer ();
+
+	// Same coalescing rule as ParameterChanged().
+	m_bExtendedRedrawPending = true;
 }
 
 void CUserInterface::ShowVoiceDataElement (unsigned nTG, unsigned nVoiceDataElement, unsigned nValue)
@@ -434,7 +441,9 @@ void CUserInterface::DisplayExtendedMixer (void)
 	{
 		m_nExtendedLastPerformanceID = nPerformanceID;
 		m_nExtendedMixerParameter = ExtendedMixerVoice;
+		m_nExtendedMixerTG = 0;
 		m_bExtendedParameterSelect = false;
+		m_bExtendedBlinkOn = true;
 	}
 
 	char Line3[17];
@@ -646,9 +655,25 @@ void CUserInterface::SelectExtendedMixerParameter (int nDirection)
 
 void CUserInterface::AdjustExtendedMixerValue (int nDirection)
 {
-	if (!m_pMiniDexed || nDirection == 0
-	 || m_nExtendedMixerParameter == ExtendedMixerVoice)
+	if (!m_pMiniDexed || nDirection == 0)
 	{
+		return;
+	}
+
+	// VOICE is the default overview, but it is also editable. Turning Encoder 2
+	// changes the program of the selected TG inside its current voice bank.
+	if (m_nExtendedMixerParameter == ExtendedMixerVoice)
+	{
+		int nProgram = m_pMiniDexed->GetTGParameter (CMiniDexed::TGParameterProgram,
+						       m_nExtendedMixerTG);
+		nProgram += nDirection;
+		if (nProgram < 0) nProgram = 31;
+		else if (nProgram > 31) nProgram = 0;
+
+		m_pMiniDexed->SetTGParameter (CMiniDexed::TGParameterProgram,
+					       nProgram, m_nExtendedMixerTG);
+		m_bExtendedBlinkOn = true;
+		DisplayExtendedMixer ();
 		return;
 	}
 
