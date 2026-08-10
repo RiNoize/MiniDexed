@@ -79,6 +79,8 @@ private:
 	void AdjustExtendedMixerValue (int nDirection);
 	void SelectExtendedMixerTG (int nDirection);
 	void SelectExtendedMixerParameter (int nDirection);
+	void ProcessEncoder2Events (void);
+	void SyncExtendedFromUIButtonEvent (CUIButton::BtnEvent Event);
 	void UIButtonsEventHandler (CUIButton::BtnEvent Event);
 	static void UIButtonsEventStub (CUIButton::BtnEvent Event, void *pParam);
 	void UISetMIDIButtonChannel (unsigned uCh);
@@ -104,8 +106,11 @@ private:
 	bool m_bSwitchPressed;
 
 	CKY040 *m_pRotaryEncoder2;
-	bool m_bSwitchPressed2;
-	bool m_bEncoder2LongPressHandled;
+	volatile bool m_bSwitchPressed2;
+	volatile bool m_bEncoder2LongPressHandled;
+	volatile int m_nEncoder2StepPending;
+	volatile bool m_bEncoder2ClickPending;
+	volatile bool m_bEncoder2HoldPending;
 	bool m_bExtendedParameterSelect;
 	bool m_bExtendedBlinkOn;
 	bool m_bExtendedRedrawPending;

@@ -128,6 +128,9 @@ CUserInterface::CUserInterface (CMiniDexed *pMiniDexed, CGPIOManager *pGPIOManag
 	m_pRotaryEncoder2 (0),
 	m_bSwitchPressed2 (false),
 	m_bEncoder2LongPressHandled (false),
+	m_nEncoder2StepPending (0),
+	m_bEncoder2ClickPending (false),
+	m_bEncoder2HoldPending (false),
 	m_bExtendedParameterSelect (false),
 	m_bExtendedBlinkOn (true),
 	m_bExtendedRedrawPending (false),
@@ -315,6 +318,10 @@ bool CUserInterface::Initialize (void)
 
 void CUserInterface::Process (void)
 {
+	// Encoder 2 callbacks are interrupt/timer callbacks. Keep them tiny and
+	// perform synth changes + OLED I2C writes here in normal UI context.
+	ProcessEncoder2Events ();
+
 	if (m_pLCDBuffered)
 	{
 		m_pLCDBuffered->Update ();
@@ -662,7 +669,7 @@ void CUserInterface::SelectExtendedMixerTG (int nDirection)
 	}
 
 	m_bExtendedBlinkOn = true;
-	DisplayExtendedMixer ();
+	m_bExtendedRedrawPending = true;
 }
 
 void CUserInterface::SelectExtendedMixerParameter (int nDirection)
@@ -681,7 +688,7 @@ void CUserInterface::SelectExtendedMixerParameter (int nDirection)
 		--m_nExtendedMixerParameter;
 	}
 	m_bExtendedBlinkOn = true;
-	DisplayExtendedMixer ();
+	m_bExtendedRedrawPending = true;
 }
 
 void CUserInterface::AdjustExtendedMixerValue (int nDirection)
@@ -704,7 +711,7 @@ void CUserInterface::AdjustExtendedMixerValue (int nDirection)
 		m_pMiniDexed->SetTGParameter (CMiniDexed::TGParameterProgram,
 					       nProgram, m_nExtendedMixerTG);
 		m_bExtendedBlinkOn = true;
-		DisplayExtendedMixer ();
+		m_bExtendedRedrawPending = true;
 		return;
 	}
 
@@ -781,11 +788,75 @@ void CUserInterface::AdjustExtendedMixerValue (int nDirection)
 
 	m_pMiniDexed->SetTGParameter (Param, nNewRaw, m_nExtendedMixerTG);
 	m_bExtendedBlinkOn = true;
-	DisplayExtendedMixer ();
+	m_bExtendedRedrawPending = true;
+}
+
+void CUserInterface::ProcessEncoder2Events (void)
+{
+	// Handle one detent per UI pass. This avoids bursts of synchronous OLED
+	// transfers and keeps audio/MIDI work responsive even if the encoder spins fast.
+	int nDirection = 0;
+	if (m_nEncoder2StepPending > 0)
+	{
+		--m_nEncoder2StepPending;
+		nDirection = +1;
+	}
+	else if (m_nEncoder2StepPending < 0)
+	{
+		++m_nEncoder2StepPending;
+		nDirection = -1;
+	}
+
+	if (m_bEncoder2HoldPending)
+	{
+		m_bEncoder2HoldPending = false;
+		if (m_bExtendedParameterSelect)
+		{
+			m_bExtendedParameterSelect = false;
+			m_nExtendedMixerParameter = ExtendedMixerVoice;
+		}
+		else
+		{
+			m_bExtendedParameterSelect = true;
+			m_nExtendedMixerParameter = ExtendedMixerVolume;
+		}
+		m_bExtendedBlinkOn = true;
+		m_bExtendedRedrawPending = true;
+	}
+
+	if (m_bEncoder2ClickPending)
+	{
+		m_bEncoder2ClickPending = false;
+		if (m_bExtendedParameterSelect)
+		{
+			m_bExtendedParameterSelect = false;
+			m_bExtendedBlinkOn = true;
+			m_bExtendedRedrawPending = true;
+		}
+		else
+		{
+			SelectExtendedMixerTG (+1);
+		}
+	}
+
+	if (nDirection != 0)
+	{
+		if (m_bExtendedParameterSelect)
+		{
+			SelectExtendedMixerParameter (nDirection);
+		}
+		else
+		{
+			AdjustExtendedMixerValue (nDirection);
+		}
+	}
 }
 
 void CUserInterface::Encoder2EventHandler (CKY040::TEvent Event)
 {
+	// CKY040 rotation events are emitted directly from GPIO interrupt context
+	// (and switch click/hold from kernel timer context). Never touch I2C or the
+	// synth here; only record pending work for Process().
 	switch (Event)
 	{
 	case CKY040::EventSwitchDown:
@@ -794,61 +865,33 @@ void CUserInterface::Encoder2EventHandler (CKY040::TEvent Event)
 		break;
 
 	case CKY040::EventSwitchUp:
-		// Low-level release is only used to clear the hold state.  Short-click
-		// actions are handled by Circle's debounced EventSwitchClick below.
 		m_bSwitchPressed2 = false;
 		m_bEncoder2LongPressHandled = false;
 		break;
 
 	case CKY040::EventSwitchClick:
-		if (m_bExtendedParameterSelect)
-		{
-			// Short click confirms the currently displayed parameter.
-			m_bExtendedParameterSelect = false;
-			m_bExtendedBlinkOn = true;
-			DisplayExtendedMixer ();
-		}
-		else
-		{
-			// Normal mode: short click advances TG1 -> ... -> TG8.
-			SelectExtendedMixerTG (+1);
-		}
+		m_bEncoder2ClickPending = true;
 		break;
 
 	case CKY040::EventClockwise:
-		if (m_bSwitchPressed2) break; // do not edit while waiting for long-click
-		if (m_bExtendedParameterSelect)
-			SelectExtendedMixerParameter (+1);
-		else
-			AdjustExtendedMixerValue (+1);
+		if (!m_bSwitchPressed2 && m_nEncoder2StepPending < 16)
+		{
+			++m_nEncoder2StepPending;
+		}
 		break;
 
 	case CKY040::EventCounterclockwise:
-		if (m_bSwitchPressed2) break;
-		if (m_bExtendedParameterSelect)
-			SelectExtendedMixerParameter (-1);
-		else
-			AdjustExtendedMixerValue (-1);
+		if (!m_bSwitchPressed2 && m_nEncoder2StepPending > -16)
+		{
+			--m_nEncoder2StepPending;
+		}
 		break;
 
 	case CKY040::EventSwitchHold:
 		if (m_bSwitchPressed2 && !m_bEncoder2LongPressHandled)
 		{
 			m_bEncoder2LongPressHandled = true;
-			if (m_bExtendedParameterSelect)
-			{
-				// Long-click again = quick escape to the default VOICE overview.
-				m_bExtendedParameterSelect = false;
-				m_nExtendedMixerParameter = ExtendedMixerVoice;
-			}
-			else
-			{
-				// Long-click = parameter selector, always starting at VOL.
-				m_bExtendedParameterSelect = true;
-				m_nExtendedMixerParameter = ExtendedMixerVolume;
-			}
-			m_bExtendedBlinkOn = true;
-			DisplayExtendedMixer ();
+			m_bEncoder2HoldPending = true;
 		}
 		break;
 
@@ -926,8 +969,68 @@ void CUserInterface::EncoderEventStub (CKY040::TEvent Event, void *pParam)
 	pThis->EncoderEventHandler (Event);
 }
 
+void CUserInterface::SyncExtendedFromUIButtonEvent (CUIButton::BtnEvent Event)
+{
+	// MIDI buttons use the same CUIButton events as physical buttons. Mirror
+	// their TG/parameter choice into the lower Performance mixer while leaving
+	// the original upper-screen menu/overlay behavior untouched.
+	switch (Event)
+	{
+	case CUIButton::BtnEventTG1: m_nExtendedMixerTG = 0; break;
+	case CUIButton::BtnEventTG2: m_nExtendedMixerTG = 1; break;
+	case CUIButton::BtnEventTG3: m_nExtendedMixerTG = 2; break;
+	case CUIButton::BtnEventTG4: m_nExtendedMixerTG = 3; break;
+	case CUIButton::BtnEventTG5: m_nExtendedMixerTG = 4; break;
+	case CUIButton::BtnEventTG6: m_nExtendedMixerTG = 5; break;
+	case CUIButton::BtnEventTG7: m_nExtendedMixerTG = 6; break;
+	case CUIButton::BtnEventTG8: m_nExtendedMixerTG = 7; break;
+
+	case CUIButton::BtnEventTGVoice:
+		m_nExtendedMixerParameter = ExtendedMixerVoice;
+		m_bExtendedParameterSelect = false;
+		break;
+	case CUIButton::BtnEventTGVolume:
+		m_nExtendedMixerParameter = ExtendedMixerVolume;
+		m_bExtendedParameterSelect = false;
+		break;
+	case CUIButton::BtnEventTGPan:
+		m_nExtendedMixerParameter = ExtendedMixerPan;
+		m_bExtendedParameterSelect = false;
+		break;
+	case CUIButton::BtnEventTGReverbSend:
+		m_nExtendedMixerParameter = ExtendedMixerReverbSend;
+		m_bExtendedParameterSelect = false;
+		break;
+	case CUIButton::BtnEventTGCutoff:
+		m_nExtendedMixerParameter = ExtendedMixerCutoff;
+		m_bExtendedParameterSelect = false;
+		break;
+	case CUIButton::BtnEventTGResonance:
+		m_nExtendedMixerParameter = ExtendedMixerResonance;
+		m_bExtendedParameterSelect = false;
+		break;
+	case CUIButton::BtnEventTGPortamento:
+		m_nExtendedMixerParameter = ExtendedMixerPortamento;
+		m_bExtendedParameterSelect = false;
+		break;
+	default:
+		return;
+	}
+
+	unsigned nTGs = m_pConfig->GetToneGenerators ();
+	if (nTGs > 8) nTGs = 8;
+	if (nTGs && m_nExtendedMixerTG >= nTGs)
+	{
+		m_nExtendedMixerTG = nTGs - 1;
+	}
+	m_bExtendedBlinkOn = true;
+	m_bExtendedRedrawPending = true;
+}
+
 void CUserInterface::UIButtonsEventHandler (CUIButton::BtnEvent Event)
 {
+	SyncExtendedFromUIButtonEvent (Event);
+
 	switch (Event)
 	{
 	case CUIButton::BtnEventPrev:
