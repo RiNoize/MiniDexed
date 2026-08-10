@@ -38,13 +38,24 @@ namespace
 
 	enum TExtendedMixerParameter
 	{
+		// First eight are the preferred direct MIDI-button pages.
 		ExtendedMixerVoice = 0,
 		ExtendedMixerVolume,
 		ExtendedMixerPan,
 		ExtendedMixerReverbSend,
+		ExtendedMixerDetune,
 		ExtendedMixerCutoff,
+		ExtendedMixerOctave,
+		ExtendedMixerShiftNote,
+
+		// Extra parameters remain available from Encoder 2 selector.
 		ExtendedMixerResonance,
+		ExtendedMixerPitchBendRange,
+		ExtendedMixerPitchBendStep,
 		ExtendedMixerPortamento,
+		ExtendedMixerPolyMono,
+		ExtendedMixerKeyLow,
+		ExtendedMixerKeyHigh,
 		ExtendedMixerParameterCount
 	};
 
@@ -53,6 +64,165 @@ namespace
 		if (nValue < nMinimum) return nMinimum;
 		if (nValue > nMaximum) return nMaximum;
 		return nValue;
+	}
+
+
+	static const char *ExtendedParameterShortName (unsigned nParameter)
+	{
+		switch (nParameter)
+		{
+		case ExtendedMixerVoice:          return "VOI";
+		case ExtendedMixerVolume:         return "VOL";
+		case ExtendedMixerPan:            return "PAN";
+		case ExtendedMixerReverbSend:     return "REV";
+		case ExtendedMixerDetune:         return "DET";
+		case ExtendedMixerCutoff:         return "CUT";
+		case ExtendedMixerOctave:         return "OCT";
+		case ExtendedMixerShiftNote:      return "SHF";
+		case ExtendedMixerResonance:      return "RES";
+		case ExtendedMixerPitchBendRange: return "PBR";
+		case ExtendedMixerPitchBendStep:  return "PBS";
+		case ExtendedMixerPortamento:     return "POR";
+		case ExtendedMixerPolyMono:       return "POL";
+		case ExtendedMixerKeyLow:         return "KLO";
+		case ExtendedMixerKeyHigh:        return "KHI";
+		default:                          return "---";
+		}
+	}
+
+	static const char *ExtendedParameterLongName (unsigned nParameter)
+	{
+		switch (nParameter)
+		{
+		case ExtendedMixerVoice:          return "VOICE";
+		case ExtendedMixerVolume:         return "VOLUME";
+		case ExtendedMixerPan:            return "PAN";
+		case ExtendedMixerReverbSend:     return "REVERB SEND";
+		case ExtendedMixerDetune:         return "DETUNE";
+		case ExtendedMixerCutoff:         return "CUTOFF";
+		case ExtendedMixerOctave:         return "OCTAVE";
+		case ExtendedMixerShiftNote:      return "SHIFT NOTE";
+		case ExtendedMixerResonance:      return "RESONANCE";
+		case ExtendedMixerPitchBendRange: return "BEND RANGE";
+		case ExtendedMixerPitchBendStep:  return "BEND STEP";
+		case ExtendedMixerPortamento:     return "PORTAMENTO TIME";
+		case ExtendedMixerPolyMono:       return "POLY / MONO";
+		case ExtendedMixerKeyLow:         return "KEY LOW";
+		case ExtendedMixerKeyHigh:        return "KEY HIGH";
+		default:                          return "PARAMETER";
+		}
+	}
+
+	static unsigned ExtendedParameterValueWidth (unsigned nParameter)
+	{
+		switch (nParameter)
+		{
+		case ExtendedMixerDetune:
+		case ExtendedMixerShiftNote:
+		case ExtendedMixerPolyMono:
+		case ExtendedMixerKeyLow:
+		case ExtendedMixerKeyHigh:
+			return 3;
+		default:
+			return 2;
+		}
+	}
+
+	static CMiniDexed::TTGParameter ExtendedTGParameter (unsigned nParameter)
+	{
+		switch (nParameter)
+		{
+		case ExtendedMixerVolume:         return CMiniDexed::TGParameterVolume;
+		case ExtendedMixerPan:            return CMiniDexed::TGParameterPan;
+		case ExtendedMixerReverbSend:     return CMiniDexed::TGParameterReverbSend;
+		case ExtendedMixerDetune:         return CMiniDexed::TGParameterMasterTune;
+		case ExtendedMixerCutoff:         return CMiniDexed::TGParameterCutoff;
+		case ExtendedMixerOctave:
+		case ExtendedMixerShiftNote:      return CMiniDexed::TGParameterNoteShift;
+		case ExtendedMixerResonance:      return CMiniDexed::TGParameterResonance;
+		case ExtendedMixerPitchBendRange: return CMiniDexed::TGParameterPitchBendRange;
+		case ExtendedMixerPitchBendStep:  return CMiniDexed::TGParameterPitchBendStep;
+		case ExtendedMixerPortamento:     return CMiniDexed::TGParameterPortamentoTime;
+		case ExtendedMixerPolyMono:       return CMiniDexed::TGParameterMonoMode;
+		case ExtendedMixerKeyLow:         return CMiniDexed::TGParameterNoteLimitLow;
+		case ExtendedMixerKeyHigh:        return CMiniDexed::TGParameterNoteLimitHigh;
+		default:                          return CMiniDexed::TGParameterVolume;
+		}
+	}
+
+	static void FormatExtendedValue (unsigned nParameter, int nRaw, char Value[4])
+	{
+		Value[0] = '-'; Value[1] = '-'; Value[2] = ' '; Value[3] = '\0';
+
+		switch (nParameter)
+		{
+		case ExtendedMixerVolume:
+		{
+			const int nShown = ClampInt ((nRaw * 99 + 63) / 127, 0, 99);
+			snprintf (Value, 4, "%02d", nShown);
+			break;
+		}
+
+		case ExtendedMixerPan:
+		{
+			int nPan;
+			if (nRaw < 64)
+				nPan = -((64 - nRaw) * 9 + 32) / 64;
+			else if (nRaw > 64)
+				nPan = ((nRaw - 64) * 9 + 31) / 63;
+			else
+				nPan = 0;
+			if (nPan > 0) snprintf (Value, 4, "+%d", ClampInt (nPan, 1, 9));
+			else if (nPan < 0) snprintf (Value, 4, "-%d", ClampInt (-nPan, 1, 9));
+			else snprintf (Value, 4, " 0");
+			break;
+		}
+
+		case ExtendedMixerReverbSend:
+		case ExtendedMixerCutoff:
+		case ExtendedMixerResonance:
+		case ExtendedMixerPortamento:
+			// These MiniDexed parameters are natively 0..99.
+			snprintf (Value, 4, "%02d", ClampInt (nRaw, 0, 99));
+			break;
+
+		case ExtendedMixerDetune:
+		case ExtendedMixerShiftNote:
+		{
+			const int nValue = (nParameter == ExtendedMixerDetune)
+				? ClampInt (nRaw, -99, 99) : ClampInt (nRaw, -24, 24);
+			if (nValue > 0) snprintf (Value, 4, "+%02d", nValue);
+			else snprintf (Value, 4, "%3d", nValue);
+			break;
+		}
+
+		case ExtendedMixerOctave:
+		{
+			const int nOctave = ClampInt (nRaw / 12, -2, 2);
+			if (nOctave > 0) snprintf (Value, 4, "+%d", nOctave);
+			else snprintf (Value, 4, "%2d", nOctave);
+			break;
+		}
+
+		case ExtendedMixerPitchBendRange:
+		case ExtendedMixerPitchBendStep:
+			snprintf (Value, 4, "%02d", ClampInt (nRaw, 0, 12));
+			break;
+
+		case ExtendedMixerPolyMono:
+			memcpy (Value, nRaw ? "MON" : "POL", 3);
+			Value[3] = '\0';
+			break;
+
+		case ExtendedMixerKeyLow:
+		case ExtendedMixerKeyHigh:
+			snprintf (Value, 4, "%03d", ClampInt (nRaw, 0, 127));
+			break;
+
+		default:
+			snprintf (Value, 4, "%02d", ClampInt (nRaw, 0, 99));
+			break;
+		}
 	}
 
 	static bool LooksLikeLegacyPerformanceGridLine (const char *pText)
@@ -372,8 +542,8 @@ void CUserInterface::DisplayWrite (const char *pMenu, const char *pParam, const 
 	assert (pValue);
 
 	// The old 1602 Performance page-2 timer still exists in CUIMenu.
-	// On the SH1106 extended UI, suppress only its distinctive 4x3-token
-	// grid so rows 1-2 never alternate away from the original menu page.
+	// It is now dormant from the IE controls, but keep this final guard so
+	// any already-armed legacy timer can never overwrite rows 1-2.
 	if (m_pConfig->GetSSD1306LCDHeight () == 64
 	 && pMenu[0] == '\0'
 	 && LooksLikeLegacyPerformanceGridLine (pParam)
@@ -472,8 +642,8 @@ void CUserInterface::DisplayExtendedMixer (void)
 		return;
 	}
 
-	// Loading another Performance always returns the extension to its
-	// default VOICE overview.
+	// Loading another Performance always returns the extension to its default
+	// VOICE overview.  Encoder 1 / original UI remains completely independent.
 	const unsigned nPerformanceID = m_pMiniDexed->GetActualPerformanceID ();
 	if (nPerformanceID != m_nExtendedLastPerformanceID)
 	{
@@ -497,35 +667,20 @@ void CUserInterface::DisplayExtendedMixer (void)
 
 	if (m_bExtendedParameterSelect)
 	{
-		const char *pShort = "VOL";
-		const char *pLong = "VOLUME";
-		switch (m_nExtendedMixerParameter)
-		{
-		case ExtendedMixerVoice:        pShort = "VOI"; pLong = "VOICE"; break;
-		case ExtendedMixerPan:          pShort = "PAN"; pLong = "PAN"; break;
-		case ExtendedMixerReverbSend:   pShort = "REV"; pLong = "REVERB SEND"; break;
-		case ExtendedMixerCutoff:       pShort = "CUT"; pLong = "CUTOFF"; break;
-		case ExtendedMixerResonance:    pShort = "RES"; pLong = "RESONANCE"; break;
-		case ExtendedMixerPortamento:   pShort = "POR"; pLong = "PORTAMENTO"; break;
-		case ExtendedMixerVolume:
-		default:                        pShort = "VOL"; pLong = "VOLUME"; break;
-		}
-
+		const char *pLong = ExtendedParameterLongName (m_nExtendedMixerParameter);
 		const char *pTitle = "SELECT PARAMETER"; // exactly 16 chars
 		memcpy (Line3, pTitle, strlen (pTitle));
 		const unsigned nLongLen = strlen (pLong);
-		const unsigned nStart = nLongLen < 16 ? (16 - nLongLen) / 2 : 0;
-		memcpy (Line4 + nStart, pLong, nLongLen < 16 ? nLongLen : 16);
+		const unsigned nVisibleLen = nLongLen < 16 ? nLongLen : 16;
+		const unsigned nStart = nVisibleLen < 16 ? (16 - nVisibleLen) / 2 : 0;
+		memcpy (Line4 + nStart, pLong, nVisibleLen);
 
 		if (m_bExtendedBlinkOn)
 		{
-			// Pulse only the short identifier embedded at the center of the name.
-			// For long names invert the whole visible name; it is clearer on OLED.
 			nInvertLine = 1;
 			nInvertStart = nStart;
-			nInvertLength = nLongLen < 16 ? nLongLen : 16;
+			nInvertLength = nVisibleLen;
 		}
-		(void) pShort;
 		m_pSSD1306->DrawLowerLines (Line3, Line4, nInvertLine,
 					     nInvertStart, nInvertLength, true);
 		return;
@@ -545,8 +700,7 @@ void CUserInterface::DisplayExtendedMixer (void)
 			}
 
 			char *pLine = nTG < 4 ? Line3 : Line4;
-			unsigned nSlot = nTG & 3U;
-			unsigned nOffset = nSlot * 4;
+			const unsigned nOffset = (nTG & 3U) * 4;
 			pLine[nOffset] = Voice[0];
 			pLine[nOffset + 1] = Voice[1];
 			pLine[nOffset + 2] = Voice[2];
@@ -561,87 +715,39 @@ void CUserInterface::DisplayExtendedMixer (void)
 	}
 	else
 	{
-		const char *pLabel = "VOL";
-		CMiniDexed::TTGParameter Param = CMiniDexed::TGParameterVolume;
-		switch (m_nExtendedMixerParameter)
-		{
-		case ExtendedMixerPan:
-			pLabel = "PAN"; Param = CMiniDexed::TGParameterPan; break;
-		case ExtendedMixerReverbSend:
-			pLabel = "REV"; Param = CMiniDexed::TGParameterReverbSend; break;
-		case ExtendedMixerCutoff:
-			pLabel = "CUT"; Param = CMiniDexed::TGParameterCutoff; break;
-		case ExtendedMixerResonance:
-			pLabel = "RES"; Param = CMiniDexed::TGParameterResonance; break;
-		case ExtendedMixerPortamento:
-			pLabel = "POR"; Param = CMiniDexed::TGParameterPortamentoTime; break;
-		case ExtendedMixerVolume:
-		default:
-			break;
-		}
-
+		const char *pLabel = ExtendedParameterShortName (m_nExtendedMixerParameter);
 		Line3[0] = pLabel[0];
 		Line3[1] = pLabel[1];
 		Line3[2] = pLabel[2];
 
+		const unsigned nValueWidth = ExtendedParameterValueWidth (m_nExtendedMixerParameter);
+		const CMiniDexed::TTGParameter Param = ExtendedTGParameter (m_nExtendedMixerParameter);
+
 		for (unsigned nTG = 0; nTG < 8; ++nTG)
 		{
-			char Value[3] = {'-', '-', '\0'};
+			char Value[4] = {'-', '-', '-', '\0'};
 			if (nTG < nTGs)
 			{
-				int nRaw = m_pMiniDexed->GetTGParameter (Param, nTG);
-				if (m_nExtendedMixerParameter == ExtendedMixerVolume
-				 || m_nExtendedMixerParameter == ExtendedMixerReverbSend
-				 || m_nExtendedMixerParameter == ExtendedMixerPortamento)
-				{
-					int nShown = ClampInt ((nRaw * 99 + 63) / 127, 0, 99);
-					snprintf (Value, sizeof Value, "%02d", nShown);
-				}
-				else if (m_nExtendedMixerParameter == ExtendedMixerPan)
-				{
-					int nPan;
-					if (nRaw < 64)
-						nPan = -((64 - nRaw) * 9 + 32) / 64;
-					else if (nRaw > 64)
-						nPan = ((nRaw - 64) * 9 + 31) / 63;
-					else
-						nPan = 0;
-
-					if (nPan > 0)
-					{
-						Value[0] = '+';
-						Value[1] = (char) ('0' + ClampInt (nPan, 1, 9));
-					}
-					else if (nPan < 0)
-					{
-						Value[0] = '-';
-						Value[1] = (char) ('0' + ClampInt (-nPan, 1, 9));
-					}
-					else
-					{
-						Value[0] = ' ';
-						Value[1] = '0';
-					}
-				}
-				else
-				{
-					int nShown = ClampInt (nRaw, 0, 99);
-					snprintf (Value, sizeof Value, "%02d", nShown);
-				}
+				const int nRaw = m_pMiniDexed->GetTGParameter (Param, nTG);
+				FormatExtendedValue (m_nExtendedMixerParameter, nRaw, Value);
 			}
 
 			char *pLine = nTG < 4 ? Line3 : Line4;
 			const unsigned nSlot = nTG & 3U;
-			const unsigned nOffset = 4 + nSlot * 3;
-			pLine[nOffset] = Value[0];
-			pLine[nOffset + 1] = Value[1];
+			// 2-char values get a one-char gap.  3-char values pack tightly:
+			// 3-letter label + 1 gap + 4x3 = exactly 16 chars on row 3.
+			const unsigned nOffset = 4 + nSlot * (nValueWidth == 3 ? 3 : 3);
+			for (unsigned i = 0; i < nValueWidth; ++i)
+			{
+				pLine[nOffset + i] = Value[i];
+			}
 		}
 
 		if (m_bExtendedBlinkOn && m_nExtendedMixerTG < nTGs)
 		{
 			nInvertLine = m_nExtendedMixerTG < 4 ? 0 : 1;
 			nInvertStart = 4 + (m_nExtendedMixerTG & 3U) * 3;
-			nInvertLength = 2;
+			nInvertLength = nValueWidth;
 		}
 	}
 
@@ -698,8 +804,7 @@ void CUserInterface::AdjustExtendedMixerValue (int nDirection)
 		return;
 	}
 
-	// VOICE is the default overview, but it is also editable. Turning Encoder 2
-	// changes the program of the selected TG inside its current voice bank.
+	// VOICE remains the default overview and is editable inside the current bank.
 	if (m_nExtendedMixerParameter == ExtendedMixerVoice)
 	{
 		int nProgram = m_pMiniDexed->GetTGParameter (CMiniDexed::TGParameterProgram,
@@ -707,7 +812,6 @@ void CUserInterface::AdjustExtendedMixerValue (int nDirection)
 		nProgram += nDirection;
 		if (nProgram < 0) nProgram = 31;
 		else if (nProgram > 31) nProgram = 0;
-
 		m_pMiniDexed->SetTGParameter (CMiniDexed::TGParameterProgram,
 					       nProgram, m_nExtendedMixerTG);
 		m_bExtendedBlinkOn = true;
@@ -715,75 +819,75 @@ void CUserInterface::AdjustExtendedMixerValue (int nDirection)
 		return;
 	}
 
-	CMiniDexed::TTGParameter Param = CMiniDexed::TGParameterVolume;
-	int nRaw = 0;
-	int nNewRaw = 0;
+	CMiniDexed::TTGParameter Param = ExtendedTGParameter (m_nExtendedMixerParameter);
+	const int nRaw = m_pMiniDexed->GetTGParameter (Param, m_nExtendedMixerTG);
+	int nNewRaw = nRaw;
 
 	switch (m_nExtendedMixerParameter)
 	{
-	case ExtendedMixerPan:
-		Param = CMiniDexed::TGParameterPan;
-		nRaw = m_pMiniDexed->GetTGParameter (Param, m_nExtendedMixerTG);
-		{
-			int nPan;
-			if (nRaw < 64)
-				nPan = -((64 - nRaw) * 9 + 32) / 64;
-			else if (nRaw > 64)
-				nPan = ((nRaw - 64) * 9 + 31) / 63;
-			else
-				nPan = 0;
-			nPan = ClampInt (nPan + nDirection, -9, 9);
-			if (nPan < 0)
-				nNewRaw = 64 - ((-nPan * 64 + 4) / 9);
-			else if (nPan > 0)
-				nNewRaw = 64 + ((nPan * 63 + 4) / 9);
-			else
-				nNewRaw = 64;
-		}
+	case ExtendedMixerVolume:
+	{
+		int nShown = ClampInt ((nRaw * 99 + 63) / 127, 0, 99);
+		nShown = ClampInt (nShown + nDirection, 0, 99);
+		nNewRaw = (nShown * 127 + 49) / 99;
 		break;
+	}
+
+	case ExtendedMixerPan:
+	{
+		int nPan;
+		if (nRaw < 64)
+			nPan = -((64 - nRaw) * 9 + 32) / 64;
+		else if (nRaw > 64)
+			nPan = ((nRaw - 64) * 9 + 31) / 63;
+		else
+			nPan = 0;
+		nPan = ClampInt (nPan + nDirection, -9, 9);
+		if (nPan < 0)
+			nNewRaw = 64 - ((-nPan * 64 + 4) / 9);
+		else if (nPan > 0)
+			nNewRaw = 64 + ((nPan * 63 + 4) / 9);
+		else
+			nNewRaw = 64;
+		break;
+	}
 
 	case ExtendedMixerReverbSend:
-		Param = CMiniDexed::TGParameterReverbSend;
-		nRaw = m_pMiniDexed->GetTGParameter (Param, m_nExtendedMixerTG);
-		{
-			int nShown = ClampInt ((nRaw * 99 + 63) / 127, 0, 99);
-			nShown = ClampInt (nShown + nDirection, 0, 99);
-			nNewRaw = (nShown * 127 + 49) / 99;
-		}
-		break;
-
 	case ExtendedMixerCutoff:
-		Param = CMiniDexed::TGParameterCutoff;
-		nRaw = m_pMiniDexed->GetTGParameter (Param, m_nExtendedMixerTG);
-		nNewRaw = ClampInt (nRaw + nDirection, 0, 99);
-		break;
-
 	case ExtendedMixerResonance:
-		Param = CMiniDexed::TGParameterResonance;
-		nRaw = m_pMiniDexed->GetTGParameter (Param, m_nExtendedMixerTG);
+	case ExtendedMixerPortamento:
 		nNewRaw = ClampInt (nRaw + nDirection, 0, 99);
 		break;
 
-	case ExtendedMixerPortamento:
-		Param = CMiniDexed::TGParameterPortamentoTime;
-		nRaw = m_pMiniDexed->GetTGParameter (Param, m_nExtendedMixerTG);
-		{
-			int nShown = ClampInt ((nRaw * 99 + 63) / 127, 0, 99);
-			nShown = ClampInt (nShown + nDirection, 0, 99);
-			nNewRaw = (nShown * 127 + 49) / 99;
-		}
+	case ExtendedMixerDetune:
+		nNewRaw = ClampInt (nRaw + nDirection, -99, 99);
 		break;
 
-	case ExtendedMixerVolume:
-	default:
-		Param = CMiniDexed::TGParameterVolume;
-		nRaw = m_pMiniDexed->GetTGParameter (Param, m_nExtendedMixerTG);
-		{
-			int nShown = ClampInt ((nRaw * 99 + 63) / 127, 0, 99);
-			nShown = ClampInt (nShown + nDirection, 0, 99);
-			nNewRaw = (nShown * 127 + 49) / 99;
-		}
+	case ExtendedMixerOctave:
+		// Coarse octave page: preserve any existing semitone offset and move 12.
+		nNewRaw = ClampInt (nRaw + nDirection * 12, -24, 24);
 		break;
+
+	case ExtendedMixerShiftNote:
+		nNewRaw = ClampInt (nRaw + nDirection, -24, 24);
+		break;
+
+	case ExtendedMixerPitchBendRange:
+	case ExtendedMixerPitchBendStep:
+		nNewRaw = ClampInt (nRaw + nDirection, 0, 12);
+		break;
+
+	case ExtendedMixerPolyMono:
+		nNewRaw = nRaw ? 0 : 1;
+		break;
+
+	case ExtendedMixerKeyLow:
+	case ExtendedMixerKeyHigh:
+		nNewRaw = ClampInt (nRaw + nDirection, 0, 127);
+		break;
+
+	default:
+		return;
 	}
 
 	m_pMiniDexed->SetTGParameter (Param, nNewRaw, m_nExtendedMixerTG);
@@ -969,11 +1073,13 @@ void CUserInterface::EncoderEventStub (CKY040::TEvent Event, void *pParam)
 	pThis->EncoderEventHandler (Event);
 }
 
-void CUserInterface::SyncExtendedFromUIButtonEvent (CUIButton::BtnEvent Event)
+bool CUserInterface::SyncExtendedFromUIButtonEvent (CUIButton::BtnEvent Event)
 {
-	// MIDI buttons use the same CUIButton events as physical buttons. Mirror
-	// their TG/parameter choice into the lower Performance mixer while leaving
-	// the original upper-screen menu/overlay behavior untouched.
+	// In this SH1106 branch the 8 direct TG buttons and the 8 preferred
+	// parameter MIDI buttons belong to the lower Performance IE.  Consume
+	// them here so CUIMenu cannot open the old 1602 page-2/page-2b overlay
+	// on rows 1-2. Encoder 1 remains the only control for the original UI.
+	bool bHandled = true;
 	switch (Event)
 	{
 	case CUIButton::BtnEventTG1: m_nExtendedMixerTG = 0; break;
@@ -985,36 +1091,51 @@ void CUserInterface::SyncExtendedFromUIButtonEvent (CUIButton::BtnEvent Event)
 	case CUIButton::BtnEventTG7: m_nExtendedMixerTG = 6; break;
 	case CUIButton::BtnEventTG8: m_nExtendedMixerTG = 7; break;
 
-	case CUIButton::BtnEventTGVoice:
+	// Re-purpose the eight existing consecutive TG-function MIDI-button slots
+	// (the stock branch uses these for Voice/Bank/Vol/Pan/Rev/Det/Cut/Res).
+	// This means the user's current 8-button hardware/CC layout needs no INI
+	// renumbering: the positions become VOI/VOL/PAN/REV/DET/CUT/OCT/SHF.
+	case CUIButton::BtnEventTGVoice:       // existing button 1
 		m_nExtendedMixerParameter = ExtendedMixerVoice;
 		m_bExtendedParameterSelect = false;
 		break;
-	case CUIButton::BtnEventTGVolume:
+	case CUIButton::BtnEventTGBank:        // existing button 2 -> Volume
 		m_nExtendedMixerParameter = ExtendedMixerVolume;
 		m_bExtendedParameterSelect = false;
 		break;
-	case CUIButton::BtnEventTGPan:
+	case CUIButton::BtnEventTGVolume:      // existing button 3 -> Pan
 		m_nExtendedMixerParameter = ExtendedMixerPan;
 		m_bExtendedParameterSelect = false;
 		break;
-	case CUIButton::BtnEventTGReverbSend:
+	case CUIButton::BtnEventTGPan:         // existing button 4 -> Reverb Send
 		m_nExtendedMixerParameter = ExtendedMixerReverbSend;
 		m_bExtendedParameterSelect = false;
 		break;
-	case CUIButton::BtnEventTGCutoff:
+	case CUIButton::BtnEventTGReverbSend:  // existing button 5 -> Detune
+		m_nExtendedMixerParameter = ExtendedMixerDetune;
+		m_bExtendedParameterSelect = false;
+		break;
+	case CUIButton::BtnEventTGDetune:      // existing button 6 -> Cutoff
 		m_nExtendedMixerParameter = ExtendedMixerCutoff;
 		m_bExtendedParameterSelect = false;
 		break;
-	case CUIButton::BtnEventTGResonance:
-		m_nExtendedMixerParameter = ExtendedMixerResonance;
+	case CUIButton::BtnEventTGCutoff:      // existing button 7 -> Octave
+		m_nExtendedMixerParameter = ExtendedMixerOctave;
 		m_bExtendedParameterSelect = false;
 		break;
-	case CUIButton::BtnEventTGPortamento:
-		m_nExtendedMixerParameter = ExtendedMixerPortamento;
+	case CUIButton::BtnEventTGResonance:   // existing button 8 -> Shift Note
+		m_nExtendedMixerParameter = ExtendedMixerShiftNote;
 		m_bExtendedParameterSelect = false;
 		break;
+
 	default:
-		return;
+		bHandled = false;
+		break;
+	}
+
+	if (!bHandled)
+	{
+		return false;
 	}
 
 	unsigned nTGs = m_pConfig->GetToneGenerators ();
@@ -1025,11 +1146,18 @@ void CUserInterface::SyncExtendedFromUIButtonEvent (CUIButton::BtnEvent Event)
 	}
 	m_bExtendedBlinkOn = true;
 	m_bExtendedRedrawPending = true;
+	return true;
 }
 
 void CUserInterface::UIButtonsEventHandler (CUIButton::BtnEvent Event)
 {
-	SyncExtendedFromUIButtonEvent (Event);
+	// Dedicated Performance IE shortcuts stop here. This removes the old
+	// top-screen MIDI Button/page-2b overlays and fixes TG1..TG8 selection
+	// by preventing CUIMenu from reinterpreting the same event.
+	if (SyncExtendedFromUIButtonEvent (Event))
+	{
+		return;
+	}
 
 	switch (Event)
 	{

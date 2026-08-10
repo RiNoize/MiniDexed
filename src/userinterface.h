@@ -80,7 +80,7 @@ private:
 	void SelectExtendedMixerTG (int nDirection);
 	void SelectExtendedMixerParameter (int nDirection);
 	void ProcessEncoder2Events (void);
-	void SyncExtendedFromUIButtonEvent (CUIButton::BtnEvent Event);
+	bool SyncExtendedFromUIButtonEvent (CUIButton::BtnEvent Event);
 	void UIButtonsEventHandler (CUIButton::BtnEvent Event);
 	static void UIButtonsEventStub (CUIButton::BtnEvent Event, void *pParam);
 	void UISetMIDIButtonChannel (unsigned uCh);
