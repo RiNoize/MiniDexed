@@ -139,6 +139,13 @@ u8 CMIDIDevice::GetChannel (unsigned nTG) const
 
 void CMIDIDevice::MIDIMessageHandler (const u8 *pMessage, size_t nLength, unsigned nCable)
 {
+	// Record raw RX first. The monitor only copies a few bytes and defers OLED
+	// rendering to the normal UI Process() loop.
+	if (m_pUI)
+	{
+		m_pUI->MIDIMonitorRecord (true, pMessage, nLength, nCable);
+	}
+
 	// The packet contents are just normal MIDI data - see
 	// https://www.midi.org/specifications/item/table-1-summary-of-midi-message
 
@@ -223,6 +230,7 @@ void CMIDIDevice::MIDIMessageHandler (const u8 *pMessage, size_t nLength, unsign
 			Iterator = s_DeviceMap.find (m_pConfig->GetMIDIThruOut ());
 			if (Iterator != s_DeviceMap.end ())
 			{
+				if (m_pUI) m_pUI->MIDIMonitorRecord (false, pMessage, nLength, nCable);
 				Iterator->second->Send (pMessage, nLength, nCable);
 			}
 		}
@@ -235,6 +243,7 @@ void CMIDIDevice::MIDIMessageHandler (const u8 *pMessage, size_t nLength, unsign
 			Iterator = s_DeviceMap.find (m_pConfig->GetMIDIThru2Out ());
 			if (Iterator != s_DeviceMap.end ())
 			{
+				if (m_pUI) m_pUI->MIDIMonitorRecord (false, pMessage, nLength, nCable);
 				Iterator->second->Send (pMessage, nLength, nCable);
 			}
 		}
@@ -898,6 +907,7 @@ void CMIDIDevice::SendSystemExclusiveVoice(uint8_t nVoice, const std::string& de
     m_pSynthesizer->getSysExVoiceDump(voicedump, nTG);
     TDeviceMap::const_iterator Iterator = s_DeviceMap.find(deviceName);
     if (Iterator != s_DeviceMap.end()) {
+        if (m_pUI) m_pUI->MIDIMonitorRecord (false, voicedump, sizeof(voicedump), nCable);
         Iterator->second->Send(voicedump, sizeof(voicedump), nCable);
         LOGDBG("Send SYSEX voice dump %u to \"%s\"", nVoice, deviceName.c_str());
     } else {

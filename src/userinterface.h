@@ -33,6 +33,7 @@
 #include <circle/i2cmaster.h>
 #include <circle/spimaster.h>
 #include <circle/timer.h>
+#include <circle/spinlock.h>
 
 class CMiniDexed;
 class CUserInterface
@@ -62,11 +63,22 @@ public:
 	// Write only rows 3 and 4 of the 128x64 SH1106.
 	// Rows 1 and 2 remain controlled by the original MiniDexed UI.
 	void DisplayWriteLower (const char *pLine3, const char *pLine4);
-	// To be called from the MIDI device on reception of a MIDI CC message
+	// To be called from the MIDI device on reception of a MIDI CC/message.
 	void UIMIDICmdHandler (unsigned nMidiCh, unsigned nMidiType, unsigned nMidiData1, unsigned nMidiData2);
+
+	// Diagnostic MIDI monitor used by the last item of the TG menu.
+	// Recording is lightweight and never writes the OLED from MIDI/IRQ context.
+	void MIDIMonitorRecord (bool bRX, const u8 *pMessage, size_t nLength, unsigned nCable = 0);
+	void MIDIMonitorEnter (void);
+	void MIDIMonitorExit (void);
+	void MIDIMonitorStep (int nDirection);
+	void MIDIMonitorDisplay (void);
 
 private:
 	void LCDWrite (const char *pString);		// Print to optional HD44780 display
+	void DisplayWriteTopRaw (const char *pLine1, const char *pLine2);
+	const char *MIDIMonitorMatchButton (unsigned nType, unsigned nNumber) const;
+	unsigned MIDIMonitorConfigValue (unsigned nPage, const char **ppName) const;
 	void EncoderEventHandler (CKY040::TEvent Event);
 	static void EncoderEventStub (CKY040::TEvent Event, void *pParam);
 
@@ -117,6 +129,16 @@ private:
 	unsigned m_nExtendedMixerTG;
 	unsigned m_nExtendedMixerParameter;
 	unsigned m_nExtendedLastPerformanceID;
+
+	// MIDI monitor state. Only a small prefix of SysEx is retained; length is exact.
+	CSpinLock m_MIDIMonitorLock;
+	bool m_bMIDIMonitorActive;
+	volatile bool m_bMIDIMonitorRedrawPending;
+	unsigned m_nMIDIMonitorPage;
+	bool m_bMIDIMonitorRX;
+	unsigned m_nMIDIMonitorCable;
+	size_t m_nMIDIMonitorLength;
+	u8 m_MIDIMonitorData[8];
 
 	CUIMenu m_Menu;
 };

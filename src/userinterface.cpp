@@ -307,8 +307,15 @@ CUserInterface::CUserInterface (CMiniDexed *pMiniDexed, CGPIOManager *pGPIOManag
 	m_nExtendedMixerTG (0),
 	m_nExtendedMixerParameter (ExtendedMixerVoice),
 	m_nExtendedLastPerformanceID (0xFFFFFFFFU),
+	m_bMIDIMonitorActive (false),
+	m_bMIDIMonitorRedrawPending (false),
+	m_nMIDIMonitorPage (0),
+	m_bMIDIMonitorRX (true),
+	m_nMIDIMonitorCable (0),
+	m_nMIDIMonitorLength (0),
 	m_Menu (this, pMiniDexed, pConfig)
 {
+	memset (m_MIDIMonitorData, 0, sizeof m_MIDIMonitorData);
 }
 CUserInterface::~CUserInterface (void)
 {
@@ -500,6 +507,11 @@ void CUserInterface::Process (void)
 	{
 		m_pUIButtons->Update();
 	}
+	if (m_bMIDIMonitorActive && m_bMIDIMonitorRedrawPending)
+	{
+		m_bMIDIMonitorRedrawPending = false;
+		MIDIMonitorDisplay ();
+	}
 	if (m_bExtendedRedrawPending)
 	{
 		m_bExtendedRedrawPending = false;
@@ -540,6 +552,9 @@ void CUserInterface::DisplayWrite (const char *pMenu, const char *pParam, const 
 	assert (pMenu);
 	assert (pParam);
 	assert (pValue);
+
+	// Any normal MiniDexed menu draw means the diagnostic monitor has been left.
+	m_bMIDIMonitorActive = false;
 
 	// The old 1602 Performance page-2 timer still exists in CUIMenu.
 	// It is now dormant from the IE controls, but keep this final guard so
@@ -611,6 +626,294 @@ void CUserInterface::DisplayWriteLower (const char *pLine3, const char *pLine4)
 	Msg.Append (pLine4);
 	Msg.Append ("\x1B[K");
 	LCDWrite (Msg);
+}
+
+void CUserInterface::DisplayWriteTopRaw (const char *pLine1, const char *pLine2)
+{
+	assert (pLine1);
+	assert (pLine2);
+
+	CString Msg ("\x1B[H\x1B[?25l");
+	Msg.Append (pLine1);
+	Msg.Append ("\x1B[K\x1B[2;1H");
+	Msg.Append (pLine2);
+	Msg.Append ("\x1B[K");
+	LCDWrite (Msg);
+}
+
+const char *CUserInterface::MIDIMonitorMatchButton (unsigned nType, unsigned nNumber) const
+{
+	// Respect the INI mode: MIDIButtonNotes=1 means Note messages, otherwise CC.
+	const bool bNotes = m_pConfig->GetMIDIButtonNotes () != 0;
+	if ((bNotes && nType != 0x9 && nType != 0x8) || (!bNotes && nType != 0xB))
+	{
+		return "";
+	}
+
+#define MATCH_BUTTON(Getter, Label) \
+	do { const unsigned v = m_pConfig->Getter (); if (v != 0 && v == nNumber) return Label; } while (0)
+	MATCH_BUTTON (GetMIDIButtonTG1, "TG1");
+	MATCH_BUTTON (GetMIDIButtonTG2, "TG2");
+	MATCH_BUTTON (GetMIDIButtonTG3, "TG3");
+	MATCH_BUTTON (GetMIDIButtonTG4, "TG4");
+	MATCH_BUTTON (GetMIDIButtonTG5, "TG5");
+	MATCH_BUTTON (GetMIDIButtonTG6, "TG6");
+	MATCH_BUTTON (GetMIDIButtonTG7, "TG7");
+	MATCH_BUTTON (GetMIDIButtonTG8, "TG8");
+	MATCH_BUTTON (GetMIDIButtonTGVoice, "VOI");
+	MATCH_BUTTON (GetMIDIButtonTGVolume, "VOL");
+	MATCH_BUTTON (GetMIDIButtonTGPan, "PAN");
+	MATCH_BUTTON (GetMIDIButtonTGReverbSend, "REV");
+	MATCH_BUTTON (GetMIDIButtonTGDetune, "DET");
+	MATCH_BUTTON (GetMIDIButtonTGCutoff, "CUT");
+	MATCH_BUTTON (GetMIDIButtonTGResonance, "OCT");
+	MATCH_BUTTON (GetMIDIButtonAltPot, "SHF");
+	MATCH_BUTTON (GetMIDIButtonPrev, "PREV");
+	MATCH_BUTTON (GetMIDIButtonNext, "NEXT");
+	MATCH_BUTTON (GetMIDIButtonBack, "BACK");
+	MATCH_BUTTON (GetMIDIButtonSelect, "SEL");
+	MATCH_BUTTON (GetMIDIButtonPerformance, "PERF");
+	MATCH_BUTTON (GetMIDIButtonTGDown, "TGDN");
+#undef MATCH_BUTTON
+	return "";
+}
+
+unsigned CUserInterface::MIDIMonitorConfigValue (unsigned nPage, const char **ppName) const
+{
+	assert (ppName);
+	*ppName = "CFG";
+	switch (nPage)
+	{
+	case 1:  *ppName = "TG1"; return m_pConfig->GetMIDIButtonTG1 ();
+	case 2:  *ppName = "TG2"; return m_pConfig->GetMIDIButtonTG2 ();
+	case 3:  *ppName = "TG3"; return m_pConfig->GetMIDIButtonTG3 ();
+	case 4:  *ppName = "TG4"; return m_pConfig->GetMIDIButtonTG4 ();
+	case 5:  *ppName = "TG5"; return m_pConfig->GetMIDIButtonTG5 ();
+	case 6:  *ppName = "TG6"; return m_pConfig->GetMIDIButtonTG6 ();
+	case 7:  *ppName = "TG7"; return m_pConfig->GetMIDIButtonTG7 ();
+	case 8:  *ppName = "TG8"; return m_pConfig->GetMIDIButtonTG8 ();
+	case 9:  *ppName = "VOICE"; return m_pConfig->GetMIDIButtonTGVoice ();
+	case 10: *ppName = "VOLUME"; return m_pConfig->GetMIDIButtonTGVolume ();
+	case 11: *ppName = "PAN"; return m_pConfig->GetMIDIButtonTGPan ();
+	case 12: *ppName = "REV SEND"; return m_pConfig->GetMIDIButtonTGReverbSend ();
+	case 13: *ppName = "DETUNE"; return m_pConfig->GetMIDIButtonTGDetune ();
+	case 14: *ppName = "CUTOFF"; return m_pConfig->GetMIDIButtonTGCutoff ();
+	case 15: *ppName = "OCTAVE"; return m_pConfig->GetMIDIButtonTGResonance ();
+	case 16: *ppName = "SHIFT"; return m_pConfig->GetMIDIButtonAltPot ();
+	default: return 0;
+	}
+}
+
+void CUserInterface::MIDIMonitorRecord (bool bRX, const u8 *pMessage, size_t nLength, unsigned nCable)
+{
+	if (!pMessage || nLength == 0)
+	{
+		return;
+	}
+
+	// Do not let MIDI clock or Active Sensing flood the diagnostic display.
+	if (nLength == 1 && (pMessage[0] == 0xF8 || pMessage[0] == 0xFE))
+	{
+		return;
+	}
+
+	m_MIDIMonitorLock.Acquire ();
+	m_bMIDIMonitorRX = bRX;
+	m_nMIDIMonitorCable = nCable;
+	m_nMIDIMonitorLength = nLength;
+	const size_t nCopy = nLength < sizeof m_MIDIMonitorData ? nLength : sizeof m_MIDIMonitorData;
+	memcpy (m_MIDIMonitorData, pMessage, nCopy);
+	if (nCopy < sizeof m_MIDIMonitorData)
+	{
+		memset (m_MIDIMonitorData + nCopy, 0, sizeof m_MIDIMonitorData - nCopy);
+	}
+	m_MIDIMonitorLock.Release ();
+
+	if (m_bMIDIMonitorActive && m_nMIDIMonitorPage == 0)
+	{
+		m_bMIDIMonitorRedrawPending = true;
+	}
+}
+
+void CUserInterface::MIDIMonitorEnter (void)
+{
+	if (!m_bMIDIMonitorActive)
+	{
+		m_bMIDIMonitorActive = true;
+		m_nMIDIMonitorPage = 0;
+	}
+	m_bMIDIMonitorRedrawPending = true;
+}
+
+void CUserInterface::MIDIMonitorExit (void)
+{
+	m_bMIDIMonitorActive = false;
+	m_bMIDIMonitorRedrawPending = false;
+}
+
+void CUserInterface::MIDIMonitorStep (int nDirection)
+{
+	static const unsigned LastPage = 16;
+	if (nDirection > 0)
+	{
+		m_nMIDIMonitorPage = (m_nMIDIMonitorPage + 1) % (LastPage + 1);
+	}
+	else if (m_nMIDIMonitorPage == 0)
+	{
+		m_nMIDIMonitorPage = LastPage;
+	}
+	else
+	{
+		--m_nMIDIMonitorPage;
+	}
+	m_bMIDIMonitorRedrawPending = true;
+	MIDIMonitorDisplay ();
+}
+
+void CUserInterface::MIDIMonitorDisplay (void)
+{
+	if (!m_bMIDIMonitorActive)
+	{
+		return;
+	}
+
+	char Line1[17];
+	char Line2[17];
+	memset (Line1, ' ', 16); Line1[16] = '\0';
+	memset (Line2, ' ', 16); Line2[16] = '\0';
+
+	if (m_nMIDIMonitorPage != 0)
+	{
+		const char *pName = 0;
+		const unsigned nValue = MIDIMonitorConfigValue (m_nMIDIMonitorPage, &pName);
+		const unsigned nCh = m_pConfig->GetMIDIButtonCh ();
+		const bool bNotes = m_pConfig->GetMIDIButtonNotes () != 0;
+		snprintf (Line1, sizeof Line1, "CFG %-8.8s", pName ? pName : "");
+		if (nValue == 0)
+		{
+			snprintf (Line2, sizeof Line2, "%s OFF CH%02u", bNotes ? "NOTE" : "CC", nCh);
+		}
+		else
+		{
+			snprintf (Line2, sizeof Line2, "%s %03u CH%02u", bNotes ? "NOTE" : "CC", nValue, nCh);
+		}
+		DisplayWriteTopRaw (Line1, Line2);
+		return;
+	}
+
+	bool bRX;
+	unsigned nCable;
+	size_t nLength;
+	u8 Data[8];
+	m_MIDIMonitorLock.Acquire ();
+	bRX = m_bMIDIMonitorRX;
+	nCable = m_nMIDIMonitorCable;
+	nLength = m_nMIDIMonitorLength;
+	memcpy (Data, m_MIDIMonitorData, sizeof Data);
+	m_MIDIMonitorLock.Release ();
+
+	if (nLength == 0)
+	{
+		snprintf (Line1, sizeof Line1, "MIDI MONITOR");
+		snprintf (Line2, sizeof Line2, "Waiting...");
+		DisplayWriteTopRaw (Line1, Line2);
+		return;
+	}
+
+	const char *pDir = bRX ? "RX" : "TX";
+	const u8 Status = Data[0];
+	if (Status == 0xF0)
+	{
+		snprintf (Line1, sizeof Line1, "%s SYSEX %uB", pDir, (unsigned) nLength);
+		char *p = Line2;
+		unsigned left = sizeof Line2;
+		for (unsigned i = 0; i < 5 && i < nLength && left > 3; ++i)
+		{
+			int n = snprintf (p, left, i ? " %02X" : "%02X", Data[i]);
+			if (n <= 0 || (unsigned)n >= left) break;
+			p += n; left -= n;
+		}
+		DisplayWriteTopRaw (Line1, Line2);
+		return;
+	}
+
+	if ((Status & 0xF0) != 0xF0)
+	{
+		const unsigned nType = Status >> 4;
+		const unsigned nCh = (Status & 0x0F) + 1;
+		const unsigned d1 = nLength > 1 ? Data[1] : 0;
+		const unsigned d2 = nLength > 2 ? Data[2] : 0;
+		const char *pMatch = MIDIMonitorMatchButton (nType, d1);
+		char Match[5] = {'\0', '\0', '\0', '\0', '\0'};
+		if (pMatch && pMatch[0])
+		{
+			strncpy (Match, pMatch, 4);
+			Match[4] = '\0';
+			const unsigned nButtonCh = m_pConfig->GetMIDIButtonCh ();
+			const bool bChannelOK = nButtonCh > 16 || (nButtonCh >= 1 && nButtonCh <= 16 && nButtonCh == nCh);
+			if (!bChannelOK)
+			{
+				size_t n = strlen (Match);
+				if (n < 4) Match[n] = '!', Match[n+1] = '\0';
+				else Match[3] = '!';
+			}
+		}
+
+		switch (nType)
+		{
+		case 0x8:
+			snprintf (Line1, sizeof Line1, "%s NOTE OFF C%02u", pDir, nCh);
+			snprintf (Line2, sizeof Line2, "N%03u V%03u %-4s", d1, d2, Match);
+			break;
+		case 0x9:
+			snprintf (Line1, sizeof Line1, "%s NOTE %s C%02u", pDir, d2 ? "ON" : "OFF", nCh);
+			snprintf (Line2, sizeof Line2, "N%03u V%03u %-4s", d1, d2, Match);
+			break;
+		case 0xA:
+			snprintf (Line1, sizeof Line1, "%s POLY PRESS", pDir);
+			snprintf (Line2, sizeof Line2, "C%02u N%03u P%03u", nCh, d1, d2);
+			break;
+		case 0xB:
+			snprintf (Line1, sizeof Line1, "%s CC C%02u %-4s", pDir, nCh, Match);
+			snprintf (Line2, sizeof Line2, "CC%03u V%03u", d1, d2);
+			break;
+		case 0xC:
+			snprintf (Line1, sizeof Line1, "%s PROGRAM C%02u", pDir, nCh);
+			snprintf (Line2, sizeof Line2, "P%03u", d1);
+			break;
+		case 0xD:
+			snprintf (Line1, sizeof Line1, "%s CH PRESS C%02u", pDir, nCh);
+			snprintf (Line2, sizeof Line2, "P%03u", d1);
+			break;
+		case 0xE:
+		{
+			const unsigned bend = d1 | (d2 << 7);
+			snprintf (Line1, sizeof Line1, "%s PITCH C%02u", pDir, nCh);
+			snprintf (Line2, sizeof Line2, "PB %05u", bend);
+			break;
+		}
+		default:
+			snprintf (Line1, sizeof Line1, "%s MIDI C%02u", pDir, nCh);
+			snprintf (Line2, sizeof Line2, "%02X %02X %02X", Data[0], Data[1], Data[2]);
+			break;
+		}
+	}
+	else
+	{
+		const char *pName = "SYSTEM";
+		switch (Status)
+		{
+		case 0xFA: pName = "START"; break;
+		case 0xFB: pName = "CONTINUE"; break;
+		case 0xFC: pName = "STOP"; break;
+		case 0xFF: pName = "RESET"; break;
+		default: break;
+		}
+		snprintf (Line1, sizeof Line1, "%s %s", pDir, pName);
+		snprintf (Line2, sizeof Line2, "CABLE %u %02X", nCable, Status);
+	}
+
+	DisplayWriteTopRaw (Line1, Line2);
 }
 
 void CUserInterface::ArmExtendedBlinkTimer (void)
@@ -1091,39 +1394,39 @@ bool CUserInterface::SyncExtendedFromUIButtonEvent (CUIButton::BtnEvent Event)
 	case CUIButton::BtnEventTG7: m_nExtendedMixerTG = 6; break;
 	case CUIButton::BtnEventTG8: m_nExtendedMixerTG = 7; break;
 
-	// Re-purpose the eight existing consecutive TG-function MIDI-button slots
-	// (the stock branch uses these for Voice/Bank/Vol/Pan/Rev/Det/Cut/Res).
-	// This means the user's current 8-button hardware/CC layout needs no INI
-	// renumbering: the positions become VOI/VOL/PAN/REV/DET/CUT/OCT/SHF.
-	case CUIButton::BtnEventTGVoice:       // existing button 1
+	// Preferred eight Performance IE MIDI buttons. These map to the actual
+	// INI slots used by the existing controller row: Voice, Volume, Pan, Reverb Send,
+	// Detune, Cutoff, Resonance (repurposed as Octave) and AltPot (repurposed as Shift Note).
+	case CUIButton::BtnEventTGVoice:
 		m_nExtendedMixerParameter = ExtendedMixerVoice;
 		m_bExtendedParameterSelect = false;
 		break;
-	case CUIButton::BtnEventTGBank:        // existing button 2 -> Volume
+	case CUIButton::BtnEventTGVolume:
 		m_nExtendedMixerParameter = ExtendedMixerVolume;
 		m_bExtendedParameterSelect = false;
 		break;
-	case CUIButton::BtnEventTGVolume:      // existing button 3 -> Pan
+	case CUIButton::BtnEventTGPan:
 		m_nExtendedMixerParameter = ExtendedMixerPan;
 		m_bExtendedParameterSelect = false;
 		break;
-	case CUIButton::BtnEventTGPan:         // existing button 4 -> Reverb Send
+	case CUIButton::BtnEventTGReverbSend:
 		m_nExtendedMixerParameter = ExtendedMixerReverbSend;
 		m_bExtendedParameterSelect = false;
 		break;
-	case CUIButton::BtnEventTGReverbSend:  // existing button 5 -> Detune
+	case CUIButton::BtnEventTGDetune:
 		m_nExtendedMixerParameter = ExtendedMixerDetune;
 		m_bExtendedParameterSelect = false;
 		break;
-	case CUIButton::BtnEventTGDetune:      // existing button 6 -> Cutoff
+	case CUIButton::BtnEventTGCutoff:
 		m_nExtendedMixerParameter = ExtendedMixerCutoff;
 		m_bExtendedParameterSelect = false;
 		break;
-	case CUIButton::BtnEventTGCutoff:      // existing button 7 -> Octave
+	case CUIButton::BtnEventTGResonance:
+		// Seventh physical parameter button: re-purpose the old Resonance slot as Octave.
 		m_nExtendedMixerParameter = ExtendedMixerOctave;
 		m_bExtendedParameterSelect = false;
 		break;
-	case CUIButton::BtnEventTGResonance:   // existing button 8 -> Shift Note
+	case CUIButton::BtnEventAltPot:
 		m_nExtendedMixerParameter = ExtendedMixerShiftNote;
 		m_bExtendedParameterSelect = false;
 		break;

@@ -37,6 +37,10 @@
 using namespace std;
 LOGMODULE ("uimenu");
 
+// SH1106 extended-ui branch: the old 1602 alternating Performance overview
+// is permanently disabled. Rows 3-4 now provide that information continuously.
+static const bool LegacyPerformanceOverviewEnabled = false;
+
 const CUIMenu::TMenuItem CUIMenu::s_MenuRoot[] =
 {
 	{"MiniDexed", MenuHandler, s_MainMenu},
@@ -93,6 +97,7 @@ const CUIMenu::TMenuItem CUIMenu::s_TGMenu[] =
 	{"Modulation",		MenuHandler,		s_ModulationMenu},
 	{"Channel",	EditTGParameter,	0,	CMiniDexed::TGParameterMIDIChannel},
 	{"Edit Voice",	MenuHandler,		s_EditVoiceMenu},
+	{"MIDI Monitor", MIDIMonitor},
 	{0}
 };
 
@@ -415,7 +420,7 @@ void CUIMenu::EventHandler (TMenuEvent Event)
 		// parameter overview is active, keep it visible and restart the same
 		// 4-second idle hold used by encoder edits, so fast MIDI controller
 		// movements do not fall back to page 1 while the user is still editing.
-		if (IsPerformanceMenuActive ()
+		if (LegacyPerformanceOverviewEnabled && IsPerformanceMenuActive ()
 			&& (m_bPerformanceOverviewShowTGParameter || m_bPerformanceOverviewAltPotGlobalLabels))
 		{
 			DisplayPerformanceTGOverview ();
@@ -433,7 +438,7 @@ void CUIMenu::EventHandler (TMenuEvent Event)
 		// "overview selectors": Cutoff shows all TG cutoffs, Pan shows all TG pans,
 		// Volume shows all TG volumes, etc. This keeps the 1602 as a performance
 		// monitor instead of jumping into one TG menu.
-		if (IsPerformanceMenuActive ())
+		if (LegacyPerformanceOverviewEnabled && IsPerformanceMenuActive ())
 		{
 			if (HandlePerformanceOverviewShortcut (Event))
 			{
@@ -1391,7 +1396,7 @@ void CUIMenu::ShowAltPotController (unsigned nTG, const char *pParameterName, in
 	(void) pParameterName;
 	(void) nValue;
 
-	if (!IsPerformanceMenuActive ())
+	if (!LegacyPerformanceOverviewEnabled || !IsPerformanceMenuActive ())
 	{
 		return;
 	}
@@ -1686,6 +1691,29 @@ void CUIMenu::MenuHandler (CUIMenu *pUIMenu, TMenuEvent Event)
 	else
 	{
 		pUIMenu->EventHandler (MenuEventUpdate);	// no, update parameter display
+	}
+}
+
+void CUIMenu::MIDIMonitor (CUIMenu *pUIMenu, TMenuEvent Event)
+{
+	switch (Event)
+	{
+	case MenuEventUpdate:
+	case MenuEventUpdateParameter:
+		pUIMenu->m_pUI->MIDIMonitorEnter ();
+		pUIMenu->m_pUI->MIDIMonitorDisplay ();
+		break;
+
+	case MenuEventStepDown:
+		pUIMenu->m_pUI->MIDIMonitorStep (-1);
+		break;
+
+	case MenuEventStepUp:
+		pUIMenu->m_pUI->MIDIMonitorStep (+1);
+		break;
+
+	default:
+		return;
 	}
 }
 
@@ -2912,7 +2940,7 @@ void CUIMenu::SysExDisplayTimerHandler (TKernelTimerHandle hTimer, void *pParam,
 	}
 
 	pThis->m_bSysExDisplayActive = false;
-	if (pThis->IsPerformanceMenuActive () &&
+	if (LegacyPerformanceOverviewEnabled && pThis->IsPerformanceMenuActive () &&
 	    (pThis->m_bPerformanceOverviewShowTGParameter ||
 	     pThis->m_bPerformanceOverviewAltPotGlobalLabels))
 	{
@@ -3122,7 +3150,7 @@ void CUIMenu::PerformanceMenu (CUIMenu *pUIMenu, TMenuEvent Event)
 						  Value.c_str (), true, true);
 //						 (int) nValue > 0, (int) nValue < (int) pUIMenu->m_pMiniDexed->GetLastPerformance());
 
-		if (!pUIMenu->m_bPerformanceOverviewSuppressArm)
+		if (LegacyPerformanceOverviewEnabled && !pUIMenu->m_bPerformanceOverviewSuppressArm)
 		{
 			// Keep the normal performance screen for 2 seconds, then alternate to
 			// the compact TG voice overview for 4 seconds. Any user action or
