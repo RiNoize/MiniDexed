@@ -48,6 +48,7 @@
 #include "common.h"
 #include "effect_mixer.hpp"
 #include "effect_platervbstereo.h"
+#include "effect_dreamdelay.h"
 #include "udpmididevice.h"
 #include "net/ftpdaemon.h"
  
@@ -108,7 +109,8 @@ public:
 	void setBreathController (uint8_t value, unsigned nTG);
 	void setAftertouch (uint8_t value, unsigned nTG);
 
-	void SetReverbSend (unsigned nReverbSend, unsigned nTG);			// 0 .. 127
+	void SetReverbSend (unsigned nReverbSend, unsigned nTG);			// 0 .. 99
+	void SetDelaySend (unsigned nDelaySend, unsigned nTG);			// 0 .. 99
 
 	void setMonoMode(uint8_t mono, uint8_t nTG);
 	void setPitchbendRange(uint8_t range, uint8_t nTG);
@@ -192,11 +194,14 @@ public:
 
 	enum TAltPotGlobalControl
 	{
+		// Physical Launch Control XL top row, left to right.
+		AltPotGlobalAmpAttack,
+		AltPotGlobalAmpRelease,
 		AltPotGlobalCutoff,
 		AltPotGlobalResonance,
-		AltPotGlobalFilterType,
-		AltPotGlobalVolumeTrim,
+		AltPotGlobalDryLevel,
 		AltPotGlobalReverbSend,
+		AltPotGlobalDelaySend,
 		AltPotGlobalPortamentoTime,
 		AltPotGlobalUnknown
 	};
@@ -211,6 +216,17 @@ public:
 		ParameterReverbLowPass,
 		ParameterReverbDiffusion,
 		ParameterReverbLevel,
+		ParameterDelayEnable,
+		ParameterDelayMode,
+		ParameterDelayTempo,
+		ParameterDelayTimeL,
+		ParameterDelayTimeR,
+		ParameterDelayFeedback,
+		ParameterDelayHighCut,
+		ParameterDelayLevel,
+		ParameterDryLevel,
+		ParameterReverbSendTrim,
+		ParameterDelaySendTrim,
 		ParameterPerformanceSelectChannel,
 		ParameterPerformanceBank,
 		ParameterUnknown
@@ -243,6 +259,7 @@ public:
 		TGParameterFilterType,
 		TGParameterMIDIChannel,
 		TGParameterReverbSend,
+		TGParameterDelaySend,
 		TGParameterPitchBendRange, 
 		TGParameterPitchBendStep,
 		TGParameterPortamentoMode,
@@ -322,6 +339,10 @@ private:
 	void ApplyPerformanceFilterChannel (unsigned nChannel, float32_t *pBuffer, unsigned nFrames);
 	void ApplyDexedFilterSettings (unsigned nTG);
 	void ResetTGFilterState (unsigned nTG);
+	void UpdateReverbSendGain (unsigned nTG);
+	void UpdateDelaySendGain (unsigned nTG);
+	void SetGlobalAmpEnvelopeRate (unsigned nValue, bool bRelease);
+	uint8_t GetCarrierMask (unsigned nTG);
 	const char* GetNetworkDeviceShortName() const;
 
 #ifdef ARM_ALLOW_MULTI_CORE
@@ -387,6 +408,7 @@ private:
 	int m_nNoteShift[CConfig::AllToneGenerators];
 
 	unsigned m_nReverbSend[CConfig::AllToneGenerators];
+	unsigned m_nDelaySend[CConfig::AllToneGenerators];
   
 	uint8_t m_nRawVoiceData[156]; 
 	
@@ -418,10 +440,13 @@ private:
 	bool m_bProfileEnabled;
 
 	AudioEffectPlateReverb* reverb;
+	AudioEffectDreamDelay* delay;
 	AudioStereoMixer<CConfig::AllToneGenerators>* tg_mixer;
 	AudioStereoMixer<CConfig::AllToneGenerators>* reverb_send_mixer;
+	AudioStereoMixer<CConfig::AllToneGenerators>* delay_send_mixer;
 
 	CSpinLock m_ReverbSpinLock;
+	CSpinLock m_DelaySpinLock;
 
 	// Network
 	CNetSubSystem* m_pNet;

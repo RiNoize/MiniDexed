@@ -82,7 +82,7 @@ CMiniDexed::CMiniDexed (CConfig *pConfig, CInterruptSystem *pInterrupt,
 		
 	m_nToneGenerators = m_pConfig->GetToneGenerators();
 	m_AltPotBank = AltPotBankOctave;
-	m_AltPotMode = AltPotModeIndividual;
+	m_AltPotMode = AltPotModeGlobal;
 	m_bTGSoloEnabled = false;
 	m_nTGSoloTG = 0;
 	m_nPolyphony = m_pConfig->GetPolyphony();
@@ -122,6 +122,7 @@ CMiniDexed::CMiniDexed (CConfig *pConfig, CInterruptSystem *pInterrupt,
 		m_nAftertouchTarget[i]=0;
 		
 		m_nReverbSend[i] = 0;
+		m_nDelaySend[i] = 0;
 
 		// Active the required number of active TGs
 		if (i<m_nToneGenerators)
@@ -261,6 +262,24 @@ CMiniDexed::CMiniDexed (CConfig *pConfig, CInterruptSystem *pInterrupt,
 	SetParameter (ParameterReverbLevel, 99);
 	// END setup reverb
 
+	// BEGIN setup delay send bus. DreamDelay is run 100% wet because MiniDexed
+	// mixes it in parallel with the dry and reverb buses.
+	delay_send_mixer = new AudioStereoMixer<CConfig::AllToneGenerators>(pConfig->GetChunkSize()/2);
+	delay = new AudioEffectDreamDelay((float) pConfig->GetSampleRate());
+	delay->setMix(1.0f);
+	SetParameter (ParameterDelayEnable, 0);
+	SetParameter (ParameterDelayMode, AudioEffectDreamDelay::PINGPONG);
+	SetParameter (ParameterDelayTempo, 120);
+	SetParameter (ParameterDelayTimeL, AudioEffectDreamDelay::T1_4);
+	SetParameter (ParameterDelayTimeR, AudioEffectDreamDelay::T1_8T);
+	SetParameter (ParameterDelayFeedback, 55);
+	SetParameter (ParameterDelayHighCut, 6300);
+	SetParameter (ParameterDelayLevel, 70);
+	SetParameter (ParameterDryLevel, 99);
+	SetParameter (ParameterReverbSendTrim, 99);
+	SetParameter (ParameterDelaySendTrim, 99);
+	// END setup delay
+
 	SetParameter (ParameterCompressorEnable, 1);
 
 	SetPerformanceSelectChannel(m_pConfig->GetPerformanceSelectChannel());
@@ -275,6 +294,8 @@ CMiniDexed::~CMiniDexed (void)
 	delete m_UDPMIDI;
 	delete m_pFTPDaemon;
 	delete m_pmDNSPublisher;
+	delete delay;
+	delete delay_send_mixer;
 }
 
 bool CMiniDexed::Initialize (void)
@@ -331,7 +352,9 @@ bool CMiniDexed::Initialize (void)
 		tg_mixer->pan(i,mapfloat(m_nPan[i],0,127,0.0f,1.0f));
 		tg_mixer->gain(i,1.0f);
 		reverb_send_mixer->pan(i,mapfloat(m_nPan[i],0,127,0.0f,1.0f));
-		reverb_send_mixer->gain(i,mapfloat(m_nReverbSend[i],0,99,0.0f,1.0f));
+		delay_send_mixer->pan(i,mapfloat(m_nPan[i],0,127,0.0f,1.0f));
+		UpdateReverbSendGain(i);
+		UpdateDelaySendGain(i);
 	}
 
 	m_PerformanceConfig.Init(m_nToneGenerators);
@@ -737,8 +760,25 @@ void CMiniDexed::SetPan (unsigned nPan, unsigned nTG)
 	
 	tg_mixer->pan(nTG,mapfloat(nPan,0,127,0.0f,1.0f));
 	reverb_send_mixer->pan(nTG,mapfloat(nPan,0,127,0.0f,1.0f));
+	delay_send_mixer->pan(nTG,mapfloat(nPan,0,127,0.0f,1.0f));
 
 	m_UI.ParameterChanged ();
+}
+
+void CMiniDexed::UpdateReverbSendGain (unsigned nTG)
+{
+	if (nTG >= m_nToneGenerators || !reverb_send_mixer) return;
+	const int nTrim = constrain(m_nParameter[ParameterReverbSendTrim], 0, 99);
+	const int nEffective = (m_nReverbSend[nTG] * nTrim + 49) / 99;
+	reverb_send_mixer->gain(nTG, mapfloat(nEffective, 0, 99, 0.0f, 1.0f));
+}
+
+void CMiniDexed::UpdateDelaySendGain (unsigned nTG)
+{
+	if (nTG >= m_nToneGenerators || !delay_send_mixer) return;
+	const int nTrim = constrain(m_nParameter[ParameterDelaySendTrim], 0, 99);
+	const int nEffective = (m_nDelaySend[nTG] * nTrim + 49) / 99;
+	delay_send_mixer->gain(nTG, mapfloat(nEffective, 0, 99, 0.0f, 1.0f));
 }
 
 void CMiniDexed::SetReverbSend (unsigned nReverbSend, unsigned nTG)
@@ -749,9 +789,19 @@ void CMiniDexed::SetReverbSend (unsigned nReverbSend, unsigned nTG)
 	if (nTG >= m_nToneGenerators) return;  // Not an active TG
 
 	m_nReverbSend[nTG] = nReverbSend;
+	UpdateReverbSendGain(nTG);
+	m_UI.ParameterChanged ();
+}
 
-	reverb_send_mixer->gain(nTG,mapfloat(nReverbSend,0,99,0.0f,1.0f));
-	
+void CMiniDexed::SetDelaySend (unsigned nDelaySend, unsigned nTG)
+{
+	nDelaySend=constrain((int)nDelaySend,0,99);
+
+	assert (nTG < CConfig::AllToneGenerators);
+	if (nTG >= m_nToneGenerators) return;
+
+	m_nDelaySend[nTG] = nDelaySend;
+	UpdateDelaySendGain(nTG);
 	m_UI.ParameterChanged ();
 }
 
@@ -1704,9 +1754,97 @@ void CMiniDexed::SetParameter (TParameter Parameter, int nValue)
 
 	case ParameterReverbLevel:
 		nValue=constrain((int)nValue,0,99);
+		m_nParameter[Parameter] = nValue;
 		m_ReverbSpinLock.Acquire ();
 		reverb->level (nValue / 99.0f);
 		m_ReverbSpinLock.Release ();
+		break;
+
+	case ParameterDelayEnable:
+		nValue = constrain((int)nValue, 0, 1);
+		m_nParameter[Parameter] = nValue;
+		m_DelaySpinLock.Acquire ();
+		delay->bypass = !nValue;
+		if (!nValue) delay->resetState();
+		m_DelaySpinLock.Release ();
+		break;
+
+	case ParameterDelayMode:
+		nValue = constrain((int)nValue, 0, (int) AudioEffectDreamDelay::MODE_UNKNOWN - 1);
+		m_nParameter[Parameter] = nValue;
+		m_DelaySpinLock.Acquire ();
+		delay->setMode((AudioEffectDreamDelay::Mode) nValue);
+		m_DelaySpinLock.Release ();
+		break;
+
+	case ParameterDelayTempo:
+		nValue = constrain((int)nValue, 30, 240);
+		m_nParameter[Parameter] = nValue;
+		m_DelaySpinLock.Acquire ();
+		delay->setTempo(nValue);
+		m_DelaySpinLock.Release ();
+		break;
+
+	case ParameterDelayTimeL:
+		nValue = constrain((int)nValue, (int) AudioEffectDreamDelay::T1_1,
+				   (int) AudioEffectDreamDelay::T1_32T);
+		m_nParameter[Parameter] = nValue;
+		m_DelaySpinLock.Acquire ();
+		delay->setTimeLSync((AudioEffectDreamDelay::Sync) nValue);
+		m_DelaySpinLock.Release ();
+		break;
+
+	case ParameterDelayTimeR:
+		nValue = constrain((int)nValue, (int) AudioEffectDreamDelay::T1_1,
+				   (int) AudioEffectDreamDelay::T1_32T);
+		m_nParameter[Parameter] = nValue;
+		m_DelaySpinLock.Acquire ();
+		delay->setTimeRSync((AudioEffectDreamDelay::Sync) nValue);
+		m_DelaySpinLock.Release ();
+		break;
+
+	case ParameterDelayFeedback:
+		nValue = constrain((int)nValue, 0, 99);
+		m_nParameter[Parameter] = nValue;
+		m_DelaySpinLock.Acquire ();
+		delay->setFeedback(nValue / 99.0f);
+		m_DelaySpinLock.Release ();
+		break;
+
+	case ParameterDelayHighCut:
+		nValue = constrain((int)nValue, 500, 16000);
+		m_nParameter[Parameter] = nValue;
+		m_DelaySpinLock.Acquire ();
+		delay->setHighCut((float) nValue);
+		m_DelaySpinLock.Release ();
+		break;
+
+	case ParameterDelayLevel:
+		nValue = constrain((int)nValue, 0, 99);
+		m_nParameter[Parameter] = nValue;
+		break;
+
+	case ParameterDryLevel:
+		nValue = constrain((int)nValue, 0, 99);
+		m_nParameter[Parameter] = nValue;
+		break;
+
+	case ParameterReverbSendTrim:
+		nValue = constrain((int)nValue, 0, 99);
+		m_nParameter[Parameter] = nValue;
+		for (unsigned nTG = 0; nTG < m_nToneGenerators; nTG++)
+		{
+			UpdateReverbSendGain(nTG);
+		}
+		break;
+
+	case ParameterDelaySendTrim:
+		nValue = constrain((int)nValue, 0, 99);
+		m_nParameter[Parameter] = nValue;
+		for (unsigned nTG = 0; nTG < m_nToneGenerators; nTG++)
+		{
+			UpdateDelaySendGain(nTG);
+		}
 		break;
 
 	case ParameterPerformanceSelectChannel:
@@ -1761,6 +1899,7 @@ void CMiniDexed::CopyTG (unsigned nFromTG, unsigned nToTG)
 	// Filter Type is Performance-wide, so Copy TG must not create
 	// or preserve a separate filter algorithm for the destination TG.
 	SetReverbSend (m_nReverbSend[nFromTG], nToTG);
+	SetDelaySend (m_nDelaySend[nFromTG], nToTG);
 
 	m_nNoteLimitLow[nToTG] = m_nNoteLimitLow[nFromTG];
 	m_nNoteLimitHigh[nToTG] = m_nNoteLimitHigh[nFromTG];
@@ -1792,12 +1931,16 @@ void CMiniDexed::CopyTG (unsigned nFromTG, unsigned nToTG)
 
 void CMiniDexed::SelectPreviousAltPotBank (void)
 {
+	// Global currently has one fixed bank of eight macros.  Prev/Next are
+	// intentionally reserved for future Global banks.
+	if (IsAltPotGlobalMode ()) return;
 	m_AltPotBank = (m_AltPotBank == AltPotBankOctave) ?
 		AltPotBankNoteShift : AltPotBankOctave;
 }
 
 void CMiniDexed::SelectNextAltPotBank (void)
 {
+	if (IsAltPotGlobalMode ()) return;
 	m_AltPotBank = (m_AltPotBank == AltPotBankOctave) ?
 		AltPotBankNoteShift : AltPotBankOctave;
 }
@@ -1854,11 +1997,16 @@ CMiniDexed::TTGParameter CMiniDexed::GetAltPotGlobalTGParameter (unsigned nContr
 	{
 	case AltPotGlobalCutoff:			return TGParameterCutoff;
 	case AltPotGlobalResonance:		return TGParameterResonance;
-	case AltPotGlobalFilterType:		return TGParameterFilterType;
-	case AltPotGlobalReverbSend:		return TGParameterReverbSend;
-	case AltPotGlobalPortamentoTime:		return TGParameterPortamentoTime;
-	case AltPotGlobalVolumeTrim:		return TGParameterUnknown; // live Expression trim, not saved TG volume
-	default:				return TGParameterUnknown;
+	case AltPotGlobalPortamentoTime:	return TGParameterPortamentoTime;
+
+	// These are Performance macros rather than one stored TG parameter.
+	case AltPotGlobalAmpAttack:
+	case AltPotGlobalAmpRelease:
+	case AltPotGlobalDryLevel:
+	case AltPotGlobalReverbSend:
+	case AltPotGlobalDelaySend:
+	default:
+		return TGParameterUnknown;
 	}
 }
 
@@ -1866,12 +2014,14 @@ const char *CMiniDexed::GetAltPotGlobalControlName (unsigned nControl) const
 {
 	switch (nControl)
 	{
+	case AltPotGlobalAmpAttack:		return "Amp Attack";
+	case AltPotGlobalAmpRelease:		return "Amp Release";
 	case AltPotGlobalCutoff:			return "Cutoff";
 	case AltPotGlobalResonance:		return "Resonance";
-	case AltPotGlobalFilterType:		return "Filter Type";
-	case AltPotGlobalVolumeTrim:		return "Volume Trim";
+	case AltPotGlobalDryLevel:		return "Dry Level";
 	case AltPotGlobalReverbSend:		return "Reverb Send";
-	case AltPotGlobalPortamentoTime:		return "Portamento";
+	case AltPotGlobalDelaySend:		return "Delay Send";
+	case AltPotGlobalPortamentoTime:	return "Portamento";
 	default:				return "---";
 	}
 }
@@ -1880,14 +2030,61 @@ const char *CMiniDexed::GetAltPotGlobalControlShortName (unsigned nControl) cons
 {
 	switch (nControl)
 	{
+	case AltPotGlobalAmpAttack:		return "Atk";
+	case AltPotGlobalAmpRelease:		return "Rel";
 	case AltPotGlobalCutoff:			return "Cut";
 	case AltPotGlobalResonance:		return "Res";
-	case AltPotGlobalFilterType:		return "Typ";
-	case AltPotGlobalVolumeTrim:		return "Vol";
+	case AltPotGlobalDryLevel:		return "Dry";
 	case AltPotGlobalReverbSend:		return "Rev";
-	case AltPotGlobalPortamentoTime:		return "Por";
+	case AltPotGlobalDelaySend:		return "Dly";
+	case AltPotGlobalPortamentoTime:	return "Por";
 	default:				return "---";
 	}
+}
+
+// Carrier masks for the original 32 DX7 algorithms.
+// Bits 0..5 are OP1..OP6.  Only carrier envelope rates are changed by the
+// global Amp Attack/Release macros; modulator envelopes are left untouched.
+uint8_t CMiniDexed::GetCarrierMask (unsigned nTG)
+{
+	static const uint8_t CarrierMask[32] =
+	{
+		0x05, 0x05, 0x09, 0x09, 0x15, 0x15, 0x0D, 0x0D,
+		0x0D, 0x19, 0x19, 0x1D, 0x1D, 0x15, 0x15, 0x07,
+		0x07, 0x07, 0x19, 0x1B, 0x1B, 0x1D, 0x1B, 0x1F,
+		0x1F, 0x1B, 0x1B, 0x25, 0x17, 0x27, 0x1F, 0x3F
+	};
+
+	if (nTG >= m_nToneGenerators)
+	{
+		return 0;
+	}
+
+	unsigned nAlgorithm = GetVoiceParameter(DEXED_ALGORITHM, NoOP, nTG);
+	if (nAlgorithm > 31) nAlgorithm = 31;
+	return CarrierMask[nAlgorithm];
+}
+
+void CMiniDexed::SetGlobalAmpEnvelopeRate (unsigned nValue, bool bRelease)
+{
+	// User-facing control is "time": 0 = fastest, 99 = slowest.
+	// DX7 EG rates have the opposite sense: 99 = fastest, 0 = slowest.
+	const unsigned nTime = constrain((int) nValue, 0, 99);
+	const uint8_t nRate = (uint8_t) (99 - nTime);
+	const uint8_t nOffset = bRelease ? DEXED_OP_EG_R4 : DEXED_OP_EG_R1;
+
+	for (unsigned nTG = 0; nTG < m_nToneGenerators; nTG++)
+	{
+		const uint8_t nCarrierMask = GetCarrierMask(nTG);
+		for (unsigned nOP = 0; nOP < 6; nOP++)
+		{
+			if (nCarrierMask & (1u << nOP))
+			{
+				SetVoiceParameter(nOffset, nRate, nOP, nTG);
+			}
+		}
+	}
+	m_UI.ParameterChanged();
 }
 
 int CMiniDexed::SetAltPotValue (unsigned nValue, unsigned nTG)
@@ -1953,6 +2150,16 @@ int CMiniDexed::SetAltPotGlobalValue (unsigned nValue, unsigned nControl)
 
 	switch (nControl)
 	{
+	case AltPotGlobalAmpAttack:
+		nConvertedValue = (int) ((nValue * 99 + 63) / 127);
+		SetGlobalAmpEnvelopeRate((unsigned) nConvertedValue, false);
+		break;
+
+	case AltPotGlobalAmpRelease:
+		nConvertedValue = (int) ((nValue * 99 + 63) / 127);
+		SetGlobalAmpEnvelopeRate((unsigned) nConvertedValue, true);
+		break;
+
 	case AltPotGlobalCutoff:
 		nConvertedValue = (int) ((nValue * 99 + 63) / 127);
 		for (unsigned nTG = 0; nTG < m_nToneGenerators; nTG++)
@@ -1969,27 +2176,21 @@ int CMiniDexed::SetAltPotGlobalValue (unsigned nValue, unsigned nControl)
 		}
 		break;
 
-	case AltPotGlobalFilterType:
-		nConvertedValue = (int) ((nValue * ((int) FilterTypeUnknown - 1) + 63) / 127);
-		SetPerformanceFilterType ((unsigned) nConvertedValue);
+	case AltPotGlobalDryLevel:
+		nConvertedValue = (int) ((nValue * 99 + 63) / 127);
+		SetParameter(ParameterDryLevel, nConvertedValue);
 		break;
 
 	case AltPotGlobalReverbSend:
+		// Global macro/trim. Individual ReverbSend1..8 values remain intact.
 		nConvertedValue = (int) ((nValue * 99 + 63) / 127);
-		for (unsigned nTG = 0; nTG < m_nToneGenerators; nTG++)
-		{
-			SetTGParameter (TGParameterReverbSend, nConvertedValue, nTG);
-		}
+		SetParameter(ParameterReverbSendTrim, nConvertedValue);
 		break;
 
-	case AltPotGlobalVolumeTrim:
-		// Expression trims the audible gain of every TG while preserving the
-		// individual saved Volume fader balances.
-		nConvertedValue = (int) constrain ((int) nValue, 0, 127);
-		for (unsigned nTG = 0; nTG < m_nToneGenerators; nTG++)
-		{
-			SetExpression (nConvertedValue, nTG);
-		}
+	case AltPotGlobalDelaySend:
+		// Global macro/trim. Individual DelaySend1..8 values remain intact.
+		nConvertedValue = (int) ((nValue * 99 + 63) / 127);
+		SetParameter(ParameterDelaySendTrim, nConvertedValue);
 		break;
 
 	case AltPotGlobalPortamentoTime:
@@ -2079,6 +2280,7 @@ void CMiniDexed::SetTGParameter (TTGParameter Parameter, int nValue, unsigned nT
 		break;
 
 	case TGParameterReverbSend:	SetReverbSend (nValue, nTG);	break;
+	case TGParameterDelaySend:	SetDelaySend (nValue, nTG);	break;
 
 	default:
 		assert (0);
@@ -2107,6 +2309,7 @@ int CMiniDexed::GetTGParameter (TTGParameter Parameter, unsigned nTG)
 	case TGParameterFilterType:	return GetPerformanceFilterType ();
 	case TGParameterMIDIChannel:	return m_nMIDIChannel[nTG];
 	case TGParameterReverbSend:	return m_nReverbSend[nTG];
+	case TGParameterDelaySend:	return m_nDelaySend[nTG];
 	case TGParameterPitchBendRange:	return m_nPitchBendRange[nTG];
 	case TGParameterPitchBendStep:	return m_nPitchBendStep[nTG];
 	case TGParameterPortamentoMode:		return m_nPortamentoMode[nTG];
@@ -2415,6 +2618,12 @@ void CMiniDexed::ProcessSound (void)
 			}
 			// END TG mixing
 
+			// Global dry return.  This only scales the direct TG mix; FX returns are
+			// added afterwards and therefore remain independent.
+			const float32_t fDryLevel = constrain (m_nParameter[ParameterDryLevel], 0, 99) / 99.0f;
+			arm_scale_f32 (SampleBuffer[indexL], fDryLevel, SampleBuffer[indexL], nFrames);
+			arm_scale_f32 (SampleBuffer[indexR], fDryLevel, SampleBuffer[indexR], nFrames);
+
 			// BEGIN adding reverb
 			if (m_nParameter[ParameterReverbEnable])
 			{
@@ -2444,6 +2653,30 @@ void CMiniDexed::ProcessSound (void)
 				m_ReverbSpinLock.Release ();
 			}
 			// END adding reverb
+
+			// BEGIN adding delay (parallel send/return, 100% wet inside DreamDelay)
+			if (m_nParameter[ParameterDelayEnable])
+			{
+				float32_t *DelaySendBuffer[2];
+				delay_send_mixer->getBuffers (DelaySendBuffer);
+				delay_send_mixer->zeroFill ();
+
+				for (uint8_t i = 0; i < m_nToneGenerators; i++)
+				{
+					delay_send_mixer->doAddMix (i, m_OutputLevel[i]);
+				}
+
+				m_DelaySpinLock.Acquire ();
+				delay->process (DelaySendBuffer[indexL], DelaySendBuffer[indexR], nFrames);
+
+				const float32_t fDelayLevel = constrain (m_nParameter[ParameterDelayLevel], 0, 99) / 99.0f;
+				arm_scale_f32 (DelaySendBuffer[indexL], fDelayLevel, DelaySendBuffer[indexL], nFrames);
+				arm_scale_f32 (DelaySendBuffer[indexR], fDelayLevel, DelaySendBuffer[indexR], nFrames);
+				arm_add_f32 (SampleBuffer[indexL], DelaySendBuffer[indexL], SampleBuffer[indexL], nFrames);
+				arm_add_f32 (SampleBuffer[indexR], DelaySendBuffer[indexR], SampleBuffer[indexR], nFrames);
+				m_DelaySpinLock.Release ();
+			}
+			// END adding delay
 
 			// Apply DreamDexed/Zyn/RBJ post filters as a true Performance master insert.
 			// This is deliberately placed after TG mixing and after reverb, so the
@@ -2566,6 +2799,7 @@ bool CMiniDexed::DoSavePerformance (void)
 		m_PerformanceConfig.SetAftertouchTarget (m_nAftertouchTarget[nTG], nTG);
 		
 		m_PerformanceConfig.SetReverbSend (m_nReverbSend[nTG], nTG);
+		m_PerformanceConfig.SetDelaySend (m_nDelaySend[nTG], nTG);
 	}
 
 	m_PerformanceConfig.SetCompressorEnable (!!m_nParameter[ParameterCompressorEnable]);
@@ -2576,6 +2810,17 @@ bool CMiniDexed::DoSavePerformance (void)
 	m_PerformanceConfig.SetReverbLowPass (m_nParameter[ParameterReverbLowPass]);
 	m_PerformanceConfig.SetReverbDiffusion (m_nParameter[ParameterReverbDiffusion]);
 	m_PerformanceConfig.SetReverbLevel (m_nParameter[ParameterReverbLevel]);
+	m_PerformanceConfig.SetDelayEnable (!!m_nParameter[ParameterDelayEnable]);
+	m_PerformanceConfig.SetDelayMode (m_nParameter[ParameterDelayMode]);
+	m_PerformanceConfig.SetDelayTempo (m_nParameter[ParameterDelayTempo]);
+	m_PerformanceConfig.SetDelayTimeL (m_nParameter[ParameterDelayTimeL]);
+	m_PerformanceConfig.SetDelayTimeR (m_nParameter[ParameterDelayTimeR]);
+	m_PerformanceConfig.SetDelayFeedback (m_nParameter[ParameterDelayFeedback]);
+	m_PerformanceConfig.SetDelayHighCut (m_nParameter[ParameterDelayHighCut]);
+	m_PerformanceConfig.SetDelayLevel (m_nParameter[ParameterDelayLevel]);
+	m_PerformanceConfig.SetDryLevel (m_nParameter[ParameterDryLevel]);
+	m_PerformanceConfig.SetReverbSendTrim (m_nParameter[ParameterReverbSendTrim]);
+	m_PerformanceConfig.SetDelaySendTrim (m_nParameter[ParameterDelaySendTrim]);
 
 	if(m_bSaveAsDeault)
 	{
@@ -3051,6 +3296,7 @@ void CMiniDexed::LoadPerformanceParameters(void)
 			}
 			setMonoMode(m_PerformanceConfig.GetMonoMode(nTG) ? 1 : 0, nTG); 
 			SetReverbSend (m_PerformanceConfig.GetReverbSend (nTG), nTG);
+			SetDelaySend (m_PerformanceConfig.GetDelaySend (nTG), nTG);
 					
 			setModWheelRange (m_PerformanceConfig.GetModulationWheelRange (nTG),  nTG);
 			setModWheelTarget (m_PerformanceConfig.GetModulationWheelTarget (nTG),  nTG);
@@ -3075,6 +3321,17 @@ void CMiniDexed::LoadPerformanceParameters(void)
 		SetParameter (ParameterReverbLowPass, m_PerformanceConfig.GetReverbLowPass ());
 		SetParameter (ParameterReverbDiffusion, m_PerformanceConfig.GetReverbDiffusion ());
 		SetParameter (ParameterReverbLevel, m_PerformanceConfig.GetReverbLevel ());
+		SetParameter (ParameterDelayEnable, m_PerformanceConfig.GetDelayEnable () ? 1 : 0);
+		SetParameter (ParameterDelayMode, m_PerformanceConfig.GetDelayMode ());
+		SetParameter (ParameterDelayTempo, m_PerformanceConfig.GetDelayTempo ());
+		SetParameter (ParameterDelayTimeL, m_PerformanceConfig.GetDelayTimeL ());
+		SetParameter (ParameterDelayTimeR, m_PerformanceConfig.GetDelayTimeR ());
+		SetParameter (ParameterDelayFeedback, m_PerformanceConfig.GetDelayFeedback ());
+		SetParameter (ParameterDelayHighCut, m_PerformanceConfig.GetDelayHighCut ());
+		SetParameter (ParameterDelayLevel, m_PerformanceConfig.GetDelayLevel ());
+		SetParameter (ParameterDryLevel, m_PerformanceConfig.GetDryLevel ());
+		SetParameter (ParameterReverbSendTrim, m_PerformanceConfig.GetReverbSendTrim ());
+		SetParameter (ParameterDelaySendTrim, m_PerformanceConfig.GetDelaySendTrim ());
 
 		m_bTGSoloEnabled = false;
 		m_nTGSoloTG = 0;

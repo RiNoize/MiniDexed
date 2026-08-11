@@ -232,8 +232,10 @@ void CConfig::Load (void)
 	m_nMIDIButtonTGVolume = m_Properties.GetNumber ("MIDIButtonTGVolume", 0);
 	m_nMIDIButtonTGPan = m_Properties.GetNumber ("MIDIButtonTGPan", 0);
 	m_nMIDIButtonTGReverbSend = m_Properties.GetNumber ("MIDIButtonTGReverbSend", 0);
+	m_nMIDIButtonTGDelaySend = m_Properties.GetNumber ("MIDIButtonTGDelaySend", 0);
 	m_nMIDIButtonTGDetune = m_Properties.GetNumber ("MIDIButtonTGDetune", 0);
 	m_nMIDIButtonTGOctave = m_Properties.GetNumber ("MIDIButtonTGOctave", 0);
+	m_nMIDIButtonTGShift = m_Properties.GetNumber ("MIDIButtonTGShift", 0);
 	m_nMIDIButtonTGCutoff = m_Properties.GetNumber ("MIDIButtonTGCutoff", 0);
 	m_nMIDIButtonTGResonance = m_Properties.GetNumber ("MIDIButtonTGResonance", 0);
 	m_nMIDIButtonTGPitchBend = m_Properties.GetNumber ("MIDIButtonTGPitchBend", 0);
@@ -892,6 +894,11 @@ unsigned CConfig::GetMIDIButtonTGReverbSend (void) const
 	return m_nMIDIButtonTGReverbSend;
 }
 
+unsigned CConfig::GetMIDIButtonTGDelaySend (void) const
+{
+	return m_nMIDIButtonTGDelaySend;
+}
+
 unsigned CConfig::GetMIDIButtonTGDetune (void) const
 {
 	return m_nMIDIButtonTGDetune;
@@ -901,6 +908,11 @@ unsigned CConfig::GetMIDIButtonTGDetune (void) const
 unsigned CConfig::GetMIDIButtonTGOctave (void) const
 {
 	return m_nMIDIButtonTGOctave;
+}
+
+unsigned CConfig::GetMIDIButtonTGShift (void) const
+{
+	return m_nMIDIButtonTGShift;
 }
 
 unsigned CConfig::GetMIDIButtonTGCutoff (void) const

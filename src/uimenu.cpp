@@ -83,9 +83,12 @@ const CUIMenu::TMenuItem CUIMenu::s_TGMenu[] =
 	{"Volume",	EditTGParameter,	0,	CMiniDexed::TGParameterVolume},
 #ifdef ARM_ALLOW_MULTI_CORE
 	{"Pan",		EditTGParameter,	0,	CMiniDexed::TGParameterPan},
-	{"Reverb-Send",	EditTGParameter,	0,	CMiniDexed::TGParameterReverbSend},
 #endif
 	{"Detune",	EditTGParameter,	0,	CMiniDexed::TGParameterMasterTune},
+#ifdef ARM_ALLOW_MULTI_CORE
+	{"Reverb-Send",	EditTGParameter,	0,	CMiniDexed::TGParameterReverbSend},
+	{"Delay-Send",	EditTGParameter,	0,	CMiniDexed::TGParameterDelaySend},
+#endif
 	{"Octave",	EditTGParameter,	0,	CMiniDexed::TGParameterNoteShift},
 	{"Key Low",	EditTGParameter,	0,	CMiniDexed::TGParameterNoteLimitLow},
 	{"Key High",	EditTGParameter,	0,	CMiniDexed::TGParameterNoteLimitHigh},
@@ -105,7 +108,9 @@ const CUIMenu::TMenuItem CUIMenu::s_EffectsMenu[] =
 {
 	{"Compress",	EditGlobalParameter,	0,	CMiniDexed::ParameterCompressorEnable},
 #ifdef ARM_ALLOW_MULTI_CORE
+	{"Dry Level",	EditGlobalParameter,	0,	CMiniDexed::ParameterDryLevel},
 	{"Reverb",	MenuHandler,		s_ReverbMenu},
+	{"Delay",	MenuHandler,		s_DelayMenu},
 #endif
 	{0}
 };
@@ -154,6 +159,19 @@ const CUIMenu::TMenuItem CUIMenu::s_ReverbMenu[] =
 	{"Low pass",	EditGlobalParameter,	0,	CMiniDexed::ParameterReverbLowPass},
 	{"Diffusion",	EditGlobalParameter,	0,	CMiniDexed::ParameterReverbDiffusion},
 	{"Level",	EditGlobalParameter,	0,	CMiniDexed::ParameterReverbLevel},
+	{0}
+};
+
+const CUIMenu::TMenuItem CUIMenu::s_DelayMenu[] =
+{
+	{"Enable",	EditGlobalParameter,	0,	CMiniDexed::ParameterDelayEnable},
+	{"Mode",	EditGlobalParameter,	0,	CMiniDexed::ParameterDelayMode},
+	{"Tempo",	EditGlobalParameter,	0,	CMiniDexed::ParameterDelayTempo},
+	{"Time L",	EditGlobalParameter,	0,	CMiniDexed::ParameterDelayTimeL},
+	{"Time R",	EditGlobalParameter,	0,	CMiniDexed::ParameterDelayTimeR},
+	{"Feedback",	EditGlobalParameter,	0,	CMiniDexed::ParameterDelayFeedback},
+	{"High Cut",	EditGlobalParameter,	0,	CMiniDexed::ParameterDelayHighCut},
+	{"Level",	EditGlobalParameter,	0,	CMiniDexed::ParameterDelayLevel},
 	{0}
 };
 
@@ -229,7 +247,7 @@ const CUIMenu::TMenuItem CUIMenu::s_SaveMenu[] =
 // must match CMiniDexed::TParameter
 const CUIMenu::TParameter CUIMenu::s_GlobalParameter[CMiniDexed::ParameterUnknown] =
 {
-	{0,	1,	1,	ToOnOff},		// ParameterCompessorEnable
+	{0,	1,	1,	ToOnOff},		// ParameterCompressorEnable
 	{0,	1,	1,	ToOnOff},		// ParameterReverbEnable
 	{0,	99,	1},				// ParameterReverbSize
 	{0,	99,	1},				// ParameterReverbHighDamp
@@ -237,8 +255,19 @@ const CUIMenu::TParameter CUIMenu::s_GlobalParameter[CMiniDexed::ParameterUnknow
 	{0,	99,	1},				// ParameterReverbLowPass
 	{0,	99,	1},				// ParameterReverbDiffusion
 	{0,	99,	1},				// ParameterReverbLevel
-	{0,	CMIDIDevice::ChannelUnknown-1,		1, ToMIDIChannel}, 	// ParameterPerformanceSelectChannel
-	{0, NUM_PERFORMANCE_BANKS, 1}	// ParameterPerformanceBank
+	{0,	1,	1,	ToOnOff},		// ParameterDelayEnable
+	{0,	AudioEffectDreamDelay::MODE_UNKNOWN-1, 1, ToDelayMode}, // ParameterDelayMode
+	{30,	240,	1},				// ParameterDelayTempo
+	{AudioEffectDreamDelay::T1_1, AudioEffectDreamDelay::SYNC_UNKNOWN-1, 1, ToDelaySync}, // ParameterDelayTimeL
+	{AudioEffectDreamDelay::T1_1, AudioEffectDreamDelay::SYNC_UNKNOWN-1, 1, ToDelaySync}, // ParameterDelayTimeR
+	{0,	99,	1},				// ParameterDelayFeedback
+	{500,	16000,	100},			// ParameterDelayHighCut
+	{0,	99,	1},				// ParameterDelayLevel
+	{0,	99,	1},				// ParameterDryLevel
+	{0,	99,	1},				// ParameterReverbSendTrim
+	{0,	99,	1},				// ParameterDelaySendTrim
+	{0,	CMIDIDevice::ChannelUnknown-1,		1, ToMIDIChannel}, // ParameterPerformanceSelectChannel
+	{0, NUM_PERFORMANCE_BANKS, 1}			// ParameterPerformanceBank
 };
 
 // must match CMiniDexed::TTGParameter
@@ -259,6 +288,7 @@ const CUIMenu::TParameter CUIMenu::s_TGParameter[CMiniDexed::TGParameterUnknown]
 	{0,	CMiniDexed::FilterTypeUnknown-1,	1, ToFilterType},	// TGParameterFilterType
 	{0,	CMIDIDevice::ChannelUnknown-1,		1, ToMIDIChannel}, 	// TGParameterMIDIChannel
 	{0, 99, 1},								// TGParameterReverbSend
+	{0, 99, 1},								// TGParameterDelaySend
 	{0,	12,					1},			// TGParameterPitchBendRange
 	{0,	12,					1},			// TGParameterPitchBendStep
 	{0,	1,					1, ToPortaMode},	// TGParameterPortamentoMode
@@ -1418,8 +1448,8 @@ void CUIMenu::ShowAltPotController (unsigned nTG, const char *pParameterName, in
 		}
 		else
 		{
-			// Volume Trim is live Expression, not the saved Volume parameter, so
-			// showing TG Volume values would be misleading.  Go straight to page 2b.
+			// This global control is a macro rather than one stored TG parameter, so
+			// there is no per-TG value page to show. Go straight to the labels page.
 			m_bPerformanceOverviewShowTGParameter = false;
 			m_nPerformanceOverviewHoldRemainingMS = 3000;
 			DisplayPerformanceTGOverview ();
@@ -2316,6 +2346,31 @@ string CUIMenu::ToFilterType (int nValue)
 	case CMiniDexed::FilterTypeLadderLPF:	return "Ladder LPF";
 	default:				return "?";
 	}
+}
+
+string CUIMenu::ToDelayMode (int nValue)
+{
+	switch (nValue)
+	{
+	case AudioEffectDreamDelay::DUAL:		return "Dual";
+	case AudioEffectDreamDelay::CROSSOVER:	return "Crossover";
+	case AudioEffectDreamDelay::PINGPONG:	return "PingPong";
+	default:				return "?";
+	}
+}
+
+string CUIMenu::ToDelaySync (int nValue)
+{
+	static const char *Names[] = {
+		"?", "1/1", "1/1T", "1/2", "1/2T", "1/4", "1/4T",
+		"1/8", "1/8T", "1/16", "1/16T", "1/32", "1/32T"
+	};
+
+	if (nValue < AudioEffectDreamDelay::T1_1 || nValue >= AudioEffectDreamDelay::SYNC_UNKNOWN)
+	{
+		return "?";
+	}
+	return Names[nValue];
 }
 
 string CUIMenu::ToMIDIChannel (int nValue)

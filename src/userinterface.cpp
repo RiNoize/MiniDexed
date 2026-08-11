@@ -43,12 +43,13 @@ namespace
 		ExtendedMixerVolume,
 		ExtendedMixerPan,
 		ExtendedMixerReverbSend,
+		ExtendedMixerDelaySend,
 		ExtendedMixerDetune,
-		ExtendedMixerCutoff,
 		ExtendedMixerOctave,
 		ExtendedMixerShiftNote,
 
 		// Extra parameters remain available from Encoder 2 selector.
+		ExtendedMixerCutoff,
 		ExtendedMixerResonance,
 		ExtendedMixerPitchBendRange,
 		ExtendedMixerPitchBendStep,
@@ -75,6 +76,7 @@ namespace
 		case ExtendedMixerVolume:         return "VOL";
 		case ExtendedMixerPan:            return "PAN";
 		case ExtendedMixerReverbSend:     return "REV";
+		case ExtendedMixerDelaySend:      return "DLY";
 		case ExtendedMixerDetune:         return "DET";
 		case ExtendedMixerCutoff:         return "CUT";
 		case ExtendedMixerOctave:         return "OCT";
@@ -98,6 +100,7 @@ namespace
 		case ExtendedMixerVolume:         return "VOLUME";
 		case ExtendedMixerPan:            return "PAN";
 		case ExtendedMixerReverbSend:     return "REVERB SEND";
+		case ExtendedMixerDelaySend:      return "DELAY SEND";
 		case ExtendedMixerDetune:         return "DETUNE";
 		case ExtendedMixerCutoff:         return "CUTOFF";
 		case ExtendedMixerOctave:         return "OCTAVE";
@@ -135,6 +138,7 @@ namespace
 		case ExtendedMixerVolume:         return CMiniDexed::TGParameterVolume;
 		case ExtendedMixerPan:            return CMiniDexed::TGParameterPan;
 		case ExtendedMixerReverbSend:     return CMiniDexed::TGParameterReverbSend;
+		case ExtendedMixerDelaySend:      return CMiniDexed::TGParameterDelaySend;
 		case ExtendedMixerDetune:         return CMiniDexed::TGParameterMasterTune;
 		case ExtendedMixerCutoff:         return CMiniDexed::TGParameterCutoff;
 		case ExtendedMixerOctave:
@@ -179,6 +183,7 @@ namespace
 		}
 
 		case ExtendedMixerReverbSend:
+		case ExtendedMixerDelaySend:
 		case ExtendedMixerCutoff:
 		case ExtendedMixerResonance:
 		case ExtendedMixerPortamento:
@@ -664,10 +669,10 @@ const char *CUserInterface::MIDIMonitorMatchButton (unsigned nType, unsigned nNu
 	MATCH_BUTTON (GetMIDIButtonTGVolume, "VOL");
 	MATCH_BUTTON (GetMIDIButtonTGPan, "PAN");
 	MATCH_BUTTON (GetMIDIButtonTGReverbSend, "REV");
+	MATCH_BUTTON (GetMIDIButtonTGDelaySend, "DLY");
 	MATCH_BUTTON (GetMIDIButtonTGDetune, "DET");
-	MATCH_BUTTON (GetMIDIButtonTGCutoff, "CUT");
-	MATCH_BUTTON (GetMIDIButtonTGResonance, "OCT");
-	MATCH_BUTTON (GetMIDIButtonAltPot, "SHF");
+	MATCH_BUTTON (GetMIDIButtonTGOctave, "OCT");
+	MATCH_BUTTON (GetMIDIButtonTGShift, "SHF");
 	MATCH_BUTTON (GetMIDIButtonPrev, "PREV");
 	MATCH_BUTTON (GetMIDIButtonNext, "NEXT");
 	MATCH_BUTTON (GetMIDIButtonBack, "BACK");
@@ -696,10 +701,10 @@ unsigned CUserInterface::MIDIMonitorConfigValue (unsigned nPage, const char **pp
 	case 10: *ppName = "VOLUME"; return m_pConfig->GetMIDIButtonTGVolume ();
 	case 11: *ppName = "PAN"; return m_pConfig->GetMIDIButtonTGPan ();
 	case 12: *ppName = "REV SEND"; return m_pConfig->GetMIDIButtonTGReverbSend ();
-	case 13: *ppName = "DETUNE"; return m_pConfig->GetMIDIButtonTGDetune ();
-	case 14: *ppName = "CUTOFF"; return m_pConfig->GetMIDIButtonTGCutoff ();
-	case 15: *ppName = "OCTAVE"; return m_pConfig->GetMIDIButtonTGResonance ();
-	case 16: *ppName = "SHIFT"; return m_pConfig->GetMIDIButtonAltPot ();
+	case 13: *ppName = "DLY SEND"; return m_pConfig->GetMIDIButtonTGDelaySend ();
+	case 14: *ppName = "DETUNE"; return m_pConfig->GetMIDIButtonTGDetune ();
+	case 15: *ppName = "OCTAVE"; return m_pConfig->GetMIDIButtonTGOctave ();
+	case 16: *ppName = "SHIFT"; return m_pConfig->GetMIDIButtonTGShift ();
 	default: return 0;
 	}
 }
@@ -1156,6 +1161,7 @@ void CUserInterface::AdjustExtendedMixerValue (int nDirection)
 	}
 
 	case ExtendedMixerReverbSend:
+	case ExtendedMixerDelaySend:
 	case ExtendedMixerCutoff:
 	case ExtendedMixerResonance:
 	case ExtendedMixerPortamento:
@@ -1394,9 +1400,8 @@ bool CUserInterface::SyncExtendedFromUIButtonEvent (CUIButton::BtnEvent Event)
 	case CUIButton::BtnEventTG7: m_nExtendedMixerTG = 6; break;
 	case CUIButton::BtnEventTG8: m_nExtendedMixerTG = 7; break;
 
-	// Preferred eight Performance IE MIDI buttons. These map to the actual
-	// INI slots used by the existing controller row: Voice, Volume, Pan, Reverb Send,
-	// Detune, Cutoff, Resonance (repurposed as Octave) and AltPot (repurposed as Shift Note).
+	// Preferred eight Performance IE MIDI buttons:
+	// Voice, Volume, Pan, Reverb Send, Delay Send, Detune, Octave, Shift Note.
 	case CUIButton::BtnEventTGVoice:
 		m_nExtendedMixerParameter = ExtendedMixerVoice;
 		m_bExtendedParameterSelect = false;
@@ -1413,20 +1418,19 @@ bool CUserInterface::SyncExtendedFromUIButtonEvent (CUIButton::BtnEvent Event)
 		m_nExtendedMixerParameter = ExtendedMixerReverbSend;
 		m_bExtendedParameterSelect = false;
 		break;
+	case CUIButton::BtnEventTGDelaySend:
+		m_nExtendedMixerParameter = ExtendedMixerDelaySend;
+		m_bExtendedParameterSelect = false;
+		break;
 	case CUIButton::BtnEventTGDetune:
 		m_nExtendedMixerParameter = ExtendedMixerDetune;
 		m_bExtendedParameterSelect = false;
 		break;
-	case CUIButton::BtnEventTGCutoff:
-		m_nExtendedMixerParameter = ExtendedMixerCutoff;
-		m_bExtendedParameterSelect = false;
-		break;
-	case CUIButton::BtnEventTGResonance:
-		// Seventh physical parameter button: re-purpose the old Resonance slot as Octave.
+	case CUIButton::BtnEventTGOctave:
 		m_nExtendedMixerParameter = ExtendedMixerOctave;
 		m_bExtendedParameterSelect = false;
 		break;
-	case CUIButton::BtnEventAltPot:
+	case CUIButton::BtnEventTGShift:
 		m_nExtendedMixerParameter = ExtendedMixerShiftNote;
 		m_bExtendedParameterSelect = false;
 		break;

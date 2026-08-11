@@ -247,8 +247,10 @@ public:
 	unsigned GetMIDIButtonTGVolume (void) const;
 	unsigned GetMIDIButtonTGPan (void) const;
 	unsigned GetMIDIButtonTGReverbSend (void) const;
+	unsigned GetMIDIButtonTGDelaySend (void) const;
 	unsigned GetMIDIButtonTGDetune (void) const;
 	unsigned GetMIDIButtonTGOctave (void) const;
+	unsigned GetMIDIButtonTGShift (void) const;
 	unsigned GetMIDIButtonTGCutoff (void) const;
 	unsigned GetMIDIButtonTGResonance (void) const;
 	unsigned GetMIDIButtonTGPitchBend (void) const;
@@ -422,8 +424,10 @@ private:
 	unsigned m_nMIDIButtonTGVolume;
 	unsigned m_nMIDIButtonTGPan;
 	unsigned m_nMIDIButtonTGReverbSend;
+	unsigned m_nMIDIButtonTGDelaySend;
 	unsigned m_nMIDIButtonTGDetune;
 	unsigned m_nMIDIButtonTGOctave;
+	unsigned m_nMIDIButtonTGShift;
 	unsigned m_nMIDIButtonTGCutoff;
 	unsigned m_nMIDIButtonTGResonance;
 	unsigned m_nMIDIButtonTGPitchBend;

@@ -168,6 +168,9 @@ bool CPerformanceConfig::Load (void)
 
 		PropertyName.Format ("ReverbSend%u", nTG+1);
 		m_nReverbSend[nTG] = m_Properties.GetNumber (PropertyName, 50);
+
+		PropertyName.Format ("DelaySend%u", nTG+1);
+		m_nDelaySend[nTG] = m_Properties.GetNumber (PropertyName, 0);
 		
 		PropertyName.Format ("PitchBendRange%u", nTG+1);
 		m_nPitchBendRange[nTG] = m_Properties.GetNumber (PropertyName, 2);
@@ -225,6 +228,20 @@ bool CPerformanceConfig::Load (void)
 	m_nReverbLowPass = m_Properties.GetNumber ("ReverbLowPass", 30);
 	m_nReverbDiffusion = m_Properties.GetNumber ("ReverbDiffusion", 65);
 	m_nReverbLevel = m_Properties.GetNumber ("ReverbLevel", 99);
+
+	// New delay bus. Old performances remain dry-compatible because DelayEnable
+	// and every DelaySend default to zero.
+	m_bDelayEnable = m_Properties.GetNumber ("DelayEnable", 0) != 0;
+	m_nDelayMode = m_Properties.GetNumber ("DelayMode", 2);           // PingPong
+	m_nDelayTempo = m_Properties.GetNumber ("DelayTempo", 120);
+	m_nDelayTimeL = m_Properties.GetNumber ("DelayTimeL", 5);        // 1/4
+	m_nDelayTimeR = m_Properties.GetNumber ("DelayTimeR", 8);        // 1/8T
+	m_nDelayFeedback = m_Properties.GetNumber ("DelayFeedback", 55);
+	m_nDelayHighCut = m_Properties.GetNumber ("DelayHighCut", 6300);
+	m_nDelayLevel = m_Properties.GetNumber ("DelayLevel", 70);
+	m_nDryLevel = m_Properties.GetNumber ("DryLevel", 99);
+	m_nReverbSendTrim = m_Properties.GetNumber ("ReverbSendTrim", 99);
+	m_nDelaySendTrim = m_Properties.GetNumber ("DelaySendTrim", 99);
 
 	return bResult;
 }
@@ -293,6 +310,9 @@ bool CPerformanceConfig::Save (void)
 
 		PropertyName.Format ("ReverbSend%u", nTG+1);
 		m_Properties.SetNumber (PropertyName, m_nReverbSend[nTG]);
+
+		PropertyName.Format ("DelaySend%u", nTG+1);
+		m_Properties.SetNumber (PropertyName, m_nDelaySend[nTG]);
 		
 		PropertyName.Format ("PitchBendRange%u", nTG+1);
 		m_Properties.SetNumber (PropertyName, m_nPitchBendRange[nTG]);
@@ -351,6 +371,18 @@ bool CPerformanceConfig::Save (void)
 	m_Properties.SetNumber ("ReverbLowPass", m_nReverbLowPass);
 	m_Properties.SetNumber ("ReverbDiffusion", m_nReverbDiffusion);
 	m_Properties.SetNumber ("ReverbLevel", m_nReverbLevel);
+
+	m_Properties.SetNumber ("DelayEnable", m_bDelayEnable ? 1 : 0);
+	m_Properties.SetNumber ("DelayMode", m_nDelayMode);
+	m_Properties.SetNumber ("DelayTempo", m_nDelayTempo);
+	m_Properties.SetNumber ("DelayTimeL", m_nDelayTimeL);
+	m_Properties.SetNumber ("DelayTimeR", m_nDelayTimeR);
+	m_Properties.SetNumber ("DelayFeedback", m_nDelayFeedback);
+	m_Properties.SetNumber ("DelayHighCut", m_nDelayHighCut);
+	m_Properties.SetNumber ("DelayLevel", m_nDelayLevel);
+	m_Properties.SetNumber ("DryLevel", m_nDryLevel);
+	m_Properties.SetNumber ("ReverbSendTrim", m_nReverbSendTrim);
+	m_Properties.SetNumber ("DelaySendTrim", m_nDelaySendTrim);
 
 	return m_Properties.Save ();
 }
@@ -431,6 +463,12 @@ unsigned CPerformanceConfig::GetReverbSend (unsigned nTG) const
 {
 	assert (nTG < CConfig::AllToneGenerators);
 	return m_nReverbSend[nTG];
+}
+
+unsigned CPerformanceConfig::GetDelaySend (unsigned nTG) const
+{
+	assert (nTG < CConfig::AllToneGenerators);
+	return m_nDelaySend[nTG];
 }
 
 void CPerformanceConfig::SetBankNumber (unsigned nValue, unsigned nTG)
@@ -514,6 +552,12 @@ void CPerformanceConfig::SetReverbSend (unsigned nValue, unsigned nTG)
 	m_nReverbSend[nTG] = nValue;
 }
 
+void CPerformanceConfig::SetDelaySend (unsigned nValue, unsigned nTG)
+{
+	assert (nTG < CConfig::AllToneGenerators);
+	m_nDelaySend[nTG] = nValue;
+}
+
 bool CPerformanceConfig::GetCompressorEnable (void) const
 {
 	return m_bCompressorEnable;
@@ -554,6 +598,18 @@ unsigned CPerformanceConfig::GetReverbLevel (void) const
 	return m_nReverbLevel;
 }
 
+bool CPerformanceConfig::GetDelayEnable (void) const { return m_bDelayEnable; }
+unsigned CPerformanceConfig::GetDelayMode (void) const { return m_nDelayMode; }
+unsigned CPerformanceConfig::GetDelayTempo (void) const { return m_nDelayTempo; }
+unsigned CPerformanceConfig::GetDelayTimeL (void) const { return m_nDelayTimeL; }
+unsigned CPerformanceConfig::GetDelayTimeR (void) const { return m_nDelayTimeR; }
+unsigned CPerformanceConfig::GetDelayFeedback (void) const { return m_nDelayFeedback; }
+unsigned CPerformanceConfig::GetDelayHighCut (void) const { return m_nDelayHighCut; }
+unsigned CPerformanceConfig::GetDelayLevel (void) const { return m_nDelayLevel; }
+unsigned CPerformanceConfig::GetDryLevel (void) const { return m_nDryLevel; }
+unsigned CPerformanceConfig::GetReverbSendTrim (void) const { return m_nReverbSendTrim; }
+unsigned CPerformanceConfig::GetDelaySendTrim (void) const { return m_nDelaySendTrim; }
+
 void CPerformanceConfig::SetCompressorEnable (bool bValue)
 {
 	m_bCompressorEnable = bValue;
@@ -593,6 +649,19 @@ void CPerformanceConfig::SetReverbLevel (unsigned nValue)
 {
 	m_nReverbLevel = nValue;
 }
+
+void CPerformanceConfig::SetDelayEnable (bool bValue) { m_bDelayEnable = bValue; }
+void CPerformanceConfig::SetDelayMode (unsigned nValue) { m_nDelayMode = nValue; }
+void CPerformanceConfig::SetDelayTempo (unsigned nValue) { m_nDelayTempo = nValue; }
+void CPerformanceConfig::SetDelayTimeL (unsigned nValue) { m_nDelayTimeL = nValue; }
+void CPerformanceConfig::SetDelayTimeR (unsigned nValue) { m_nDelayTimeR = nValue; }
+void CPerformanceConfig::SetDelayFeedback (unsigned nValue) { m_nDelayFeedback = nValue; }
+void CPerformanceConfig::SetDelayHighCut (unsigned nValue) { m_nDelayHighCut = nValue; }
+void CPerformanceConfig::SetDelayLevel (unsigned nValue) { m_nDelayLevel = nValue; }
+void CPerformanceConfig::SetDryLevel (unsigned nValue) { m_nDryLevel = nValue; }
+void CPerformanceConfig::SetReverbSendTrim (unsigned nValue) { m_nReverbSendTrim = nValue; }
+void CPerformanceConfig::SetDelaySendTrim (unsigned nValue) { m_nDelaySendTrim = nValue; }
+
 // Pitch bender and portamento:
 void CPerformanceConfig::SetPitchBendRange (unsigned nValue, unsigned nTG)
 {

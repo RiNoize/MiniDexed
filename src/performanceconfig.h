@@ -55,7 +55,8 @@ public:
 	unsigned GetNoteLimitLow (unsigned nTG) const;		// 0 .. 127
 	unsigned GetNoteLimitHigh (unsigned nTG) const;		// 0 .. 127
 	int GetNoteShift (unsigned nTG) const;			// -24 .. 24
-	unsigned GetReverbSend (unsigned nTG) const;		// 0 .. 127
+	unsigned GetReverbSend (unsigned nTG) const;		// 0 .. 99
+	unsigned GetDelaySend (unsigned nTG) const;		// 0 .. 99
 	unsigned GetPitchBendRange (unsigned nTG) const;		// 0 .. 12
 	unsigned GetPitchBendStep (unsigned nTG) const;		// 0 .. 12
 	unsigned GetPortamentoMode (unsigned nTG) const;		// 0 .. 1
@@ -85,6 +86,7 @@ public:
 	void SetNoteLimitHigh (unsigned nValue, unsigned nTG);
 	void SetNoteShift (int nValue, unsigned nTG);
 	void SetReverbSend (unsigned nValue, unsigned nTG);
+	void SetDelaySend (unsigned nValue, unsigned nTG);
 	void SetPitchBendRange (unsigned nValue, unsigned nTG);
 	void SetPitchBendStep (unsigned nValue, unsigned nTG);
 	void SetPortamentoMode (unsigned nValue, unsigned nTG);
@@ -112,6 +114,17 @@ public:
 	unsigned GetReverbLowPass (void) const;			// 0 .. 99
 	unsigned GetReverbDiffusion (void) const;		// 0 .. 99
 	unsigned GetReverbLevel (void) const;			// 0 .. 99
+	bool GetDelayEnable (void) const;
+	unsigned GetDelayMode (void) const;			// 0 .. 2
+	unsigned GetDelayTempo (void) const;			// 30 .. 240 BPM
+	unsigned GetDelayTimeL (void) const;			// DreamDelay Sync enum 1 .. 12
+	unsigned GetDelayTimeR (void) const;			// DreamDelay Sync enum 1 .. 12
+	unsigned GetDelayFeedback (void) const;		// 0 .. 99
+	unsigned GetDelayHighCut (void) const;		// Hz
+	unsigned GetDelayLevel (void) const;			// 0 .. 99
+	unsigned GetDryLevel (void) const;			// 0 .. 99
+	unsigned GetReverbSendTrim (void) const;		// 0 .. 99
+	unsigned GetDelaySendTrim (void) const;		// 0 .. 99
 
 	void SetCompressorEnable (bool bValue);
 	void SetReverbEnable (bool bValue);
@@ -121,6 +134,17 @@ public:
 	void SetReverbLowPass (unsigned nValue);
 	void SetReverbDiffusion (unsigned nValue);
 	void SetReverbLevel (unsigned nValue);
+	void SetDelayEnable (bool bValue);
+	void SetDelayMode (unsigned nValue);
+	void SetDelayTempo (unsigned nValue);
+	void SetDelayTimeL (unsigned nValue);
+	void SetDelayTimeR (unsigned nValue);
+	void SetDelayFeedback (unsigned nValue);
+	void SetDelayHighCut (unsigned nValue);
+	void SetDelayLevel (unsigned nValue);
+	void SetDryLevel (unsigned nValue);
+	void SetReverbSendTrim (unsigned nValue);
+	void SetDelaySendTrim (unsigned nValue);
 
 	bool VoiceDataFilled(unsigned nTG);
 	bool ListPerformances(); 
@@ -169,6 +193,7 @@ private:
 	unsigned m_nNoteLimitHigh[CConfig::AllToneGenerators];
 	int m_nNoteShift[CConfig::AllToneGenerators];
 	int m_nReverbSend[CConfig::AllToneGenerators];
+	int m_nDelaySend[CConfig::AllToneGenerators];
 	unsigned m_nPitchBendRange[CConfig::AllToneGenerators];
 	unsigned m_nPitchBendStep[CConfig::AllToneGenerators];
 	unsigned m_nPortamentoMode[CConfig::AllToneGenerators];
@@ -207,6 +232,18 @@ private:
 	unsigned m_nReverbLowPass;
 	unsigned m_nReverbDiffusion;
 	unsigned m_nReverbLevel;
+
+	bool m_bDelayEnable;
+	unsigned m_nDelayMode;
+	unsigned m_nDelayTempo;
+	unsigned m_nDelayTimeL;
+	unsigned m_nDelayTimeR;
+	unsigned m_nDelayFeedback;
+	unsigned m_nDelayHighCut;
+	unsigned m_nDelayLevel;
+	unsigned m_nDryLevel;
+	unsigned m_nReverbSendTrim;
+	unsigned m_nDelaySendTrim;
 };
 
 #endif

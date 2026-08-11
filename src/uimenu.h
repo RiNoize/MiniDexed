@@ -148,6 +148,8 @@ private:
 	static std::string ToPan (int nValue);
 	static std::string ToOctave (int nValue);
 	static std::string ToFilterType (int nValue);
+	static std::string ToDelayMode (int nValue);
+	static std::string ToDelaySync (int nValue);
 	static std::string ToMIDIChannel (int nValue);
 
 	static std::string ToAlgorithm (int nValue);
@@ -219,6 +221,7 @@ private:
 	static const TMenuItem s_TGMenu[];
 	static const TMenuItem s_EffectsMenu[];
 	static const TMenuItem s_ReverbMenu[];
+	static const TMenuItem s_DelayMenu[];
 	static const TMenuItem s_EditVoiceMenu[];
 	static const TMenuItem s_OperatorMenu[];
 	static const TMenuItem s_SaveMenu[];

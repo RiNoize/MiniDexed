@@ -326,8 +326,10 @@ boolean CUIButtons::Initialize (void)
 	m_TGVolumeMidi = ccToMidiPin( m_pConfig->GetMIDIButtonTGVolume ());
 	m_TGPanMidi = ccToMidiPin( m_pConfig->GetMIDIButtonTGPan ());
 	m_TGReverbSendMidi = ccToMidiPin( m_pConfig->GetMIDIButtonTGReverbSend ());
+	m_TGDelaySendMidi = ccToMidiPin( m_pConfig->GetMIDIButtonTGDelaySend ());
 	m_TGDetuneMidi = ccToMidiPin( m_pConfig->GetMIDIButtonTGDetune ());
 	m_TGOctaveMidi = ccToMidiPin( m_pConfig->GetMIDIButtonTGOctave ());
+	m_TGShiftMidi = ccToMidiPin( m_pConfig->GetMIDIButtonTGShift ());
 	m_TGCutoffMidi = ccToMidiPin( m_pConfig->GetMIDIButtonTGCutoff ());
 	m_TGResonanceMidi = ccToMidiPin( m_pConfig->GetMIDIButtonTGResonance ());
 	m_TGPitchBendMidi = ccToMidiPin( m_pConfig->GetMIDIButtonTGPitchBend ());
@@ -369,7 +371,8 @@ boolean CUIButtons::Initialize (void)
 		m_TGVoiceMidi, m_TGBankMidi, m_TGVolumeMidi, m_TGPanMidi, m_TGReverbSendMidi, m_TGDetuneMidi, m_TGOctaveMidi,
 		m_TGCutoffMidi, m_TGResonanceMidi, m_TGPitchBendMidi, m_TGPortamentoMidi, m_TGPolyMonoMidi,
 		m_TGModulationMidi, m_TGChannelMidi, m_TGEditVoiceMidi, m_TGSoloMidi,
-		m_AltPotMidi, m_AltPotPrevMidi, m_AltPotNextMidi, m_AltPotModeMidi
+		m_AltPotMidi, m_AltPotPrevMidi, m_AltPotNextMidi, m_AltPotModeMidi,
+		m_TGDelaySendMidi, m_TGShiftMidi
 	};
 	CUIButton::BtnTrigger triggers[MAX_BUTTONS] = {
 		// Normal buttons
@@ -386,6 +389,7 @@ boolean CUIButtons::Initialize (void)
 		CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick,
 		CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick,
 		CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick,
+		CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick,
 		CUIButton::BtnTriggerClick, CUIButton::BtnTriggerClick
 	};
 	CUIButton::BtnEvent events[MAX_BUTTONS] = {
@@ -443,7 +447,9 @@ boolean CUIButtons::Initialize (void)
 		CUIButton::BtnEventAltPot,
 		CUIButton::BtnEventAltPotPrev,
 		CUIButton::BtnEventAltPotNext,
-		CUIButton::BtnEventAltPotMode
+		CUIButton::BtnEventAltPotMode,
+		CUIButton::BtnEventTGDelaySend,
+		CUIButton::BtnEventTGShift
 	};
 
 	// Setup normal GPIO buttons first
