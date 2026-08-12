@@ -68,6 +68,141 @@ namespace
 	}
 
 
+	enum TExtendedPage
+	{
+		ExtendedPageMixerA = 0,
+		ExtendedPageContextB,
+		ExtendedPageAltPotC
+	};
+
+	enum TExtendedQuickContext
+	{
+		ExtendedQuickNone = 0,
+		ExtendedQuickDelay,
+		ExtendedQuickReverb
+	};
+
+	struct TExtendedQuickParameter
+	{
+		const char *Label;
+		CMiniDexed::TParameter Parameter;
+		int Minimum;
+		int Maximum;
+		int Increment;
+	};
+
+	static const TExtendedQuickParameter DelayQuickParameters[8] =
+	{
+		{"EN",  CMiniDexed::ParameterDelayEnable,   0, 1, 1},
+		{"MOD", CMiniDexed::ParameterDelayMode,     0, AudioEffectDreamDelay::MODE_UNKNOWN-1, 1},
+		{"L",   CMiniDexed::ParameterDelayTimeL,    AudioEffectDreamDelay::T1_1, AudioEffectDreamDelay::T1_32T, 1},
+		{"R",   CMiniDexed::ParameterDelayTimeR,    AudioEffectDreamDelay::T1_1, AudioEffectDreamDelay::T1_32T, 1},
+		{"FB",  CMiniDexed::ParameterDelayFeedback, 0, 99, 1},
+		{"CUT", CMiniDexed::ParameterDelayHighCut,  500, 16000, 100},
+		{"LEV", CMiniDexed::ParameterDelayLevel,    0, 99, 1},
+		{"TMP", CMiniDexed::ParameterDelayTempo,    30, 240, 1}
+	};
+
+	static const TExtendedQuickParameter ReverbQuickParameters[8] =
+	{
+		{"EN",  CMiniDexed::ParameterReverbEnable,    0, 1, 1},
+		{"SIZ", CMiniDexed::ParameterReverbSize,      0, 99, 1},
+		{"HDP", CMiniDexed::ParameterReverbHighDamp,  0, 99, 1},
+		{"LDP", CMiniDexed::ParameterReverbLowDamp,   0, 99, 1},
+		{"LPF", CMiniDexed::ParameterReverbLowPass,   0, 99, 1},
+		{"DIF", CMiniDexed::ParameterReverbDiffusion, 0, 99, 1},
+		{"LEV", CMiniDexed::ParameterReverbLevel,     0, 99, 1},
+		{"DRY", CMiniDexed::ParameterDryLevel,        0, 99, 1}
+	};
+
+	static const TExtendedQuickParameter *GetExtendedQuickParameter (unsigned nContext, unsigned nIndex)
+	{
+		if (nIndex >= 8) return 0;
+		switch (nContext)
+		{
+		case ExtendedQuickDelay:  return &DelayQuickParameters[nIndex];
+		case ExtendedQuickReverb: return &ReverbQuickParameters[nIndex];
+		default:                  return 0;
+		}
+	}
+
+	static const char *DelaySyncShortName (int nValue)
+	{
+		switch (nValue)
+		{
+		case AudioEffectDreamDelay::T1_1:   return "1/1";
+		case AudioEffectDreamDelay::T1_1T:  return "1T";
+		case AudioEffectDreamDelay::T1_2:   return "1/2";
+		case AudioEffectDreamDelay::T1_2T:  return "2T";
+		case AudioEffectDreamDelay::T1_4:   return "1/4";
+		case AudioEffectDreamDelay::T1_4T:  return "4T";
+		case AudioEffectDreamDelay::T1_8:   return "1/8";
+		case AudioEffectDreamDelay::T1_8T:  return "8T";
+		case AudioEffectDreamDelay::T1_16:  return "16";
+		case AudioEffectDreamDelay::T1_16T: return "16T";
+		case AudioEffectDreamDelay::T1_32:  return "32";
+		case AudioEffectDreamDelay::T1_32T: return "32T";
+		default:                            return "---";
+		}
+	}
+
+	static void FormatExtendedQuickValue (CMiniDexed::TParameter Parameter, int nValue, char Value[4])
+	{
+		memset (Value, ' ', 3);
+		Value[3] = '\0';
+
+		if (Parameter == CMiniDexed::ParameterDelayEnable ||
+		    Parameter == CMiniDexed::ParameterReverbEnable)
+		{
+			memcpy (Value, nValue ? "ON " : "OFF", 3);
+			return;
+		}
+
+		if (Parameter == CMiniDexed::ParameterDelayMode)
+		{
+			const char *pMode = "---";
+			switch (nValue)
+			{
+			case AudioEffectDreamDelay::DUAL:      pMode = "DUL"; break;
+			case AudioEffectDreamDelay::CROSSOVER: pMode = "XOV"; break;
+			case AudioEffectDreamDelay::PINGPONG:  pMode = "PNG"; break;
+			default: break;
+			}
+			memcpy (Value, pMode, 3);
+			return;
+		}
+
+		if (Parameter == CMiniDexed::ParameterDelayTimeL ||
+		    Parameter == CMiniDexed::ParameterDelayTimeR)
+		{
+			const char *pSync = DelaySyncShortName (nValue);
+			snprintf (Value, 4, "%3s", pSync);
+			return;
+		}
+
+		if (Parameter == CMiniDexed::ParameterDelayHighCut)
+		{
+			if (nValue >= 1000)
+			{
+				snprintf (Value, 4, "%dK", ClampInt ((nValue + 500) / 1000, 1, 16));
+			}
+			else
+			{
+				snprintf (Value, 4, "%3d", ClampInt (nValue, 0, 999));
+			}
+			return;
+		}
+
+		if (Parameter == CMiniDexed::ParameterDelayTempo)
+		{
+			snprintf (Value, 4, "%3d", ClampInt (nValue, 30, 240));
+			return;
+		}
+
+		snprintf (Value, 4, "%02d", ClampInt (nValue, 0, 99));
+	}
+
+
 	static const char *ExtendedParameterShortName (unsigned nParameter)
 	{
 		switch (nParameter)
@@ -312,6 +447,14 @@ CUserInterface::CUserInterface (CMiniDexed *pMiniDexed, CGPIOManager *pGPIOManag
 	m_nExtendedMixerTG (0),
 	m_nExtendedMixerParameter (ExtendedMixerVoice),
 	m_nExtendedLastPerformanceID (0xFFFFFFFFU),
+	m_nExtendedPage (ExtendedPageMixerA),
+	m_nExtendedPreviousABPage (ExtendedPageMixerA),
+	m_nExtendedQuickContext (ExtendedQuickNone),
+	m_nExtendedQuickParameter (0),
+	m_bExtendedQuickEdit (false),
+	m_bAltPotBankOverlayActive (false),
+	m_nAltPotBankOverlaySequence (0),
+	m_nAltPotActiveControl (8),
 	m_bMIDIMonitorActive (false),
 	m_bMIDIMonitorRedrawPending (false),
 	m_nMIDIMonitorPage (0),
@@ -549,7 +692,20 @@ void CUserInterface::ShowVoiceDataElement (unsigned nTG, unsigned nVoiceDataElem
 
 void CUserInterface::ShowAltPotController (unsigned nTG, const char *pParameterName, int nValue)
 {
-	m_Menu.ShowAltPotController (nTG, pParameterName, nValue);
+	(void) pParameterName;
+	(void) nValue;
+
+	// AltPot feedback belongs exclusively to lower Page C in this branch.
+	// Never steal rows 1-2 from Encoder 1.
+	if (m_pMiniDexed->IsAltPotGlobalMode () && nTG < 8)
+	{
+		m_nAltPotActiveControl = nTG;
+	}
+	if (m_nExtendedPage == ExtendedPageAltPotC)
+	{
+		m_bExtendedBlinkOn = true;
+		m_bExtendedRedrawPending = true;
+	}
 }
 void CUserInterface::DisplayWrite (const char *pMenu, const char *pParam, const char *pValue,
 				   bool bArrowDown, bool bArrowUp)
@@ -616,6 +772,11 @@ void CUserInterface::DisplayWrite (const char *pMenu, const char *pParam, const 
 	}
 
 	LCDWrite (Msg);
+
+	// Page B follows Encoder 1 / the original UI.  Every top-screen draw is
+	// therefore also an opportunity to refresh the lower contextual page.
+	UpdateExtendedQuickContext (pMenu, pValue);
+	m_bExtendedRedrawPending = true;
 }
 
 void CUserInterface::DisplayWriteLower (const char *pLine3, const char *pLine4)
@@ -673,6 +834,7 @@ const char *CUserInterface::MIDIMonitorMatchButton (unsigned nType, unsigned nNu
 	MATCH_BUTTON (GetMIDIButtonTGDetune, "DET");
 	MATCH_BUTTON (GetMIDIButtonTGOctave, "OCT");
 	MATCH_BUTTON (GetMIDIButtonTGShift, "SHF");
+	MATCH_BUTTON (GetMIDIButtonUIPage, "PAGE");
 	MATCH_BUTTON (GetMIDIButtonPrev, "PREV");
 	MATCH_BUTTON (GetMIDIButtonNext, "NEXT");
 	MATCH_BUTTON (GetMIDIButtonBack, "BACK");
@@ -960,6 +1122,21 @@ void CUserInterface::DisplayExtendedMixer (void)
 		m_nExtendedMixerTG = 0;
 		m_bExtendedParameterSelect = false;
 		m_bExtendedBlinkOn = true;
+		m_nExtendedPage = ExtendedPageMixerA;
+		m_nExtendedPreviousABPage = ExtendedPageMixerA;
+		m_bExtendedQuickEdit = false;
+		m_bAltPotBankOverlayActive = false;
+	}
+
+	if (m_nExtendedPage == ExtendedPageContextB)
+	{
+		DisplayExtendedContextPage ();
+		return;
+	}
+	if (m_nExtendedPage == ExtendedPageAltPotC)
+	{
+		DisplayExtendedAltPotPage ();
+		return;
 	}
 
 	char Line3[17];
@@ -1059,8 +1236,211 @@ void CUserInterface::DisplayExtendedMixer (void)
 		}
 	}
 
+
 	m_pSSD1306->DrawLowerLines (Line3, Line4, nInvertLine,
 				     nInvertStart, nInvertLength, true);
+}
+
+void CUserInterface::UpdateExtendedQuickContext (const char *pMenu, const char *pValue)
+{
+	unsigned nNewContext = ExtendedQuickNone;
+	if (pMenu && strcmp (pMenu, "Delay") == 0)
+	{
+		nNewContext = ExtendedQuickDelay;
+	}
+	else if (pMenu && strcmp (pMenu, "Reverb") == 0)
+	{
+		nNewContext = ExtendedQuickReverb;
+	}
+	else if (pMenu && pValue && strcmp (pMenu, "Effects") == 0)
+	{
+		if (strcmp (pValue, "Delay") == 0) nNewContext = ExtendedQuickDelay;
+		else if (strcmp (pValue, "Reverb") == 0) nNewContext = ExtendedQuickReverb;
+	}
+
+	if (nNewContext != m_nExtendedQuickContext)
+	{
+		m_nExtendedQuickContext = nNewContext;
+		m_nExtendedQuickParameter = 0;
+		m_bExtendedQuickEdit = false;
+		m_bExtendedBlinkOn = true;
+	}
+}
+
+void CUserInterface::DisplayExtendedContextPage (void)
+{
+	char Line3[17];
+	char Line4[17];
+	memset (Line3, ' ', 16);
+	memset (Line4, ' ', 16);
+	Line3[16] = '\0';
+	Line4[16] = '\0';
+
+	if (m_nExtendedQuickContext == ExtendedQuickNone)
+	{
+		const char *pTop = "FX QUICK PAGE B";
+		const char *pBottom = "SELECT DELAY/REV";
+		memcpy (Line3, pTop, strlen (pTop));
+		memcpy (Line4, pBottom, strlen (pBottom));
+		m_pSSD1306->DrawLowerLines (Line3, Line4, -1, 0, 0, true);
+		return;
+	}
+
+	const unsigned nGroupStart = (m_nExtendedQuickParameter / 4U) * 4U;
+	for (unsigned nSlot = 0; nSlot < 4; ++nSlot)
+	{
+		const unsigned nIndex = nGroupStart + nSlot;
+		const TExtendedQuickParameter *pQuick =
+			GetExtendedQuickParameter (m_nExtendedQuickContext, nIndex);
+		if (!pQuick) continue;
+
+		const unsigned nOffset = nSlot * 4U;
+		const size_t nLabelLen = strlen (pQuick->Label);
+		memcpy (Line3 + nOffset, pQuick->Label, nLabelLen < 3 ? nLabelLen : 3);
+
+		char Value[4];
+		FormatExtendedQuickValue (pQuick->Parameter,
+			m_pMiniDexed->GetParameter (pQuick->Parameter), Value);
+		memcpy (Line4 + nOffset, Value, 3);
+	}
+
+	const unsigned nSlot = m_nExtendedQuickParameter & 3U;
+	const unsigned nInvertStart = nSlot * 4U;
+	const int nInvertLine = m_bExtendedQuickEdit ? 1 : 0;
+	m_pSSD1306->DrawLowerLines (Line3, Line4, nInvertLine,
+				     nInvertStart, 3, true);
+}
+
+void CUserInterface::DisplayExtendedAltPotPage (void)
+{
+	char Line3[17];
+	char Line4[17];
+	memset (Line3, ' ', 16);
+	memset (Line4, ' ', 16);
+	Line3[16] = '\0';
+	Line4[16] = '\0';
+
+	if (m_bAltPotBankOverlayActive)
+	{
+		const char *pTitle = "ALTPOT BANK";
+		const char *pBank = m_pMiniDexed->GetAltPotBankName ();
+		unsigned nTitleLen = strlen (pTitle);
+		if (nTitleLen > 16) nTitleLen = 16;
+		unsigned nBankLen = strlen (pBank);
+		if (nBankLen > 16) nBankLen = 16;
+		memcpy (Line3 + (16 - nTitleLen) / 2, pTitle, nTitleLen);
+		memcpy (Line4 + (16 - nBankLen) / 2, pBank, nBankLen);
+		m_pSSD1306->DrawLowerLines (Line3, Line4, -1, 0, 0, true);
+		return;
+	}
+
+	if (m_pMiniDexed->IsAltPotGlobalMode ())
+	{
+		for (unsigned nControl = 0; nControl < 8; ++nControl)
+		{
+			const char *pName = m_pMiniDexed->GetAltPotGlobalControlShortName (nControl);
+			char *pLine = nControl < 4 ? Line3 : Line4;
+			const unsigned nOffset = (nControl & 3U) * 4U;
+			const size_t nLen = strlen (pName);
+			memcpy (pLine + nOffset, pName, nLen < 3 ? nLen : 3);
+		}
+
+		int nInvertLine = -1;
+		unsigned nInvertStart = 0;
+		if (m_nAltPotActiveControl < 8 && m_bExtendedBlinkOn)
+		{
+			nInvertLine = m_nAltPotActiveControl < 4 ? 0 : 1;
+			nInvertStart = (m_nAltPotActiveControl & 3U) * 4U;
+		}
+		m_pSSD1306->DrawLowerLines (Line3, Line4, nInvertLine,
+					     nInvertStart, nInvertLine >= 0 ? 3 : 0, true);
+		return;
+	}
+
+	const char *pTitle = "ALTPOT INDIVID";
+	const char *pBank = m_pMiniDexed->GetAltPotBankName ();
+	memcpy (Line3, pTitle, strlen (pTitle));
+	unsigned nBankLen = strlen (pBank);
+	if (nBankLen > 16) nBankLen = 16;
+	memcpy (Line4 + (16 - nBankLen) / 2, pBank, nBankLen);
+	m_pSSD1306->DrawLowerLines (Line3, Line4, -1, 0, 0, true);
+}
+
+void CUserInterface::ToggleExtendedABPage (void)
+{
+	if (m_nExtendedPage == ExtendedPageAltPotC)
+	{
+		m_nExtendedPage = m_nExtendedPreviousABPage;
+	}
+	else
+	{
+		m_nExtendedPage = (m_nExtendedPage == ExtendedPageMixerA)
+			? ExtendedPageContextB : ExtendedPageMixerA;
+		m_nExtendedPreviousABPage = m_nExtendedPage;
+	}
+	m_bExtendedParameterSelect = false;
+	m_bExtendedQuickEdit = false;
+	m_bAltPotBankOverlayActive = false;
+	m_bExtendedBlinkOn = true;
+	m_bExtendedRedrawPending = true;
+}
+
+void CUserInterface::EnterExtendedAltPotPage (void)
+{
+	if (m_nExtendedPage != ExtendedPageAltPotC)
+	{
+		m_nExtendedPreviousABPage = m_nExtendedPage == ExtendedPageContextB
+			? ExtendedPageContextB : ExtendedPageMixerA;
+	}
+	m_nExtendedPage = ExtendedPageAltPotC;
+	m_bExtendedParameterSelect = false;
+	m_bExtendedQuickEdit = false;
+	m_bAltPotBankOverlayActive = true;
+	m_nAltPotActiveControl = 8;
+	m_bExtendedBlinkOn = true;
+	++m_nAltPotBankOverlaySequence;
+	CTimer::Get ()->StartKernelTimer (MSEC2HZ (2000),
+					 ExtendedAltPotOverlayTimerHandler,
+					 (void *)(uintptr_t) m_nAltPotBankOverlaySequence, this);
+	m_bExtendedRedrawPending = true;
+}
+
+void CUserInterface::ExtendedAltPotOverlayTimerHandler (TKernelTimerHandle hTimer,
+							void *pParam, void *pContext)
+{
+	(void) hTimer;
+	CUserInterface *pThis = static_cast<CUserInterface *> (pContext);
+	assert (pThis);
+	const unsigned nSequence = (unsigned)(uintptr_t) pParam;
+	if (nSequence != pThis->m_nAltPotBankOverlaySequence) return;
+	pThis->m_bAltPotBankOverlayActive = false;
+	pThis->m_bExtendedRedrawPending = true;
+}
+
+void CUserInterface::SelectExtendedQuickParameter (int nDirection)
+{
+	if (m_nExtendedQuickContext == ExtendedQuickNone) return;
+	if (nDirection > 0)
+		m_nExtendedQuickParameter = (m_nExtendedQuickParameter + 1U) & 7U;
+	else
+		m_nExtendedQuickParameter = (m_nExtendedQuickParameter + 7U) & 7U;
+	m_bExtendedBlinkOn = true;
+	m_bExtendedRedrawPending = true;
+}
+
+void CUserInterface::AdjustExtendedQuickValue (int nDirection)
+{
+	const TExtendedQuickParameter *pQuick =
+		GetExtendedQuickParameter (m_nExtendedQuickContext, m_nExtendedQuickParameter);
+	if (!pQuick) return;
+
+	int nValue = m_pMiniDexed->GetParameter (pQuick->Parameter);
+	nValue = ClampInt (nValue + nDirection * pQuick->Increment,
+			   pQuick->Minimum, pQuick->Maximum);
+	m_pMiniDexed->SetParameter (pQuick->Parameter, nValue);
+	m_Menu.EventHandler (CUIMenu::MenuEventUpdateParameter);
+	m_bExtendedBlinkOn = true;
+	m_bExtendedRedrawPending = true;
 }
 
 void CUserInterface::SelectExtendedMixerTG (int nDirection)
@@ -1220,6 +1600,47 @@ void CUserInterface::ProcessEncoder2Events (void)
 		nDirection = -1;
 	}
 
+	// Page C is a live AltPot legend.  AltPot knobs themselves edit the values;
+	// Encoder 2 is intentionally passive here. MIDIButtonUIPage returns to A/B.
+	if (m_nExtendedPage == ExtendedPageAltPotC)
+	{
+		m_bEncoder2HoldPending = false;
+		m_bEncoder2ClickPending = false;
+		return;
+	}
+
+	// Page B: Encoder 2 selects a quick FX parameter. Click toggles edit mode;
+	// rotation edits while selected. Long press simply cancels edit mode.
+	if (m_nExtendedPage == ExtendedPageContextB)
+	{
+		if (m_bEncoder2HoldPending)
+		{
+			m_bEncoder2HoldPending = false;
+			m_bExtendedQuickEdit = false;
+			m_bExtendedBlinkOn = true;
+			m_bExtendedRedrawPending = true;
+		}
+
+		if (m_bEncoder2ClickPending)
+		{
+			m_bEncoder2ClickPending = false;
+			if (m_nExtendedQuickContext != ExtendedQuickNone)
+			{
+				m_bExtendedQuickEdit = !m_bExtendedQuickEdit;
+				m_bExtendedBlinkOn = true;
+				m_bExtendedRedrawPending = true;
+			}
+		}
+
+		if (nDirection != 0)
+		{
+			if (m_bExtendedQuickEdit) AdjustExtendedQuickValue (nDirection);
+			else SelectExtendedQuickParameter (nDirection);
+		}
+		return;
+	}
+
+	// Page A keeps the established mixer behavior.
 	if (m_bEncoder2HoldPending)
 	{
 		m_bEncoder2HoldPending = false;
@@ -1254,14 +1675,8 @@ void CUserInterface::ProcessEncoder2Events (void)
 
 	if (nDirection != 0)
 	{
-		if (m_bExtendedParameterSelect)
-		{
-			SelectExtendedMixerParameter (nDirection);
-		}
-		else
-		{
-			AdjustExtendedMixerValue (nDirection);
-		}
+		if (m_bExtendedParameterSelect) SelectExtendedMixerParameter (nDirection);
+		else AdjustExtendedMixerValue (nDirection);
 	}
 }
 
@@ -1387,18 +1802,19 @@ bool CUserInterface::SyncExtendedFromUIButtonEvent (CUIButton::BtnEvent Event)
 	// In this SH1106 branch the 8 direct TG buttons and the 8 preferred
 	// parameter MIDI buttons belong to the lower Performance IE.  Consume
 	// them here so CUIMenu cannot open the old 1602 page-2/page-2b overlay
-	// on rows 1-2. Encoder 1 remains the only control for the original UI.
+	// on rows 1-2. Direct TG buttons are the exception: they also call CUIMenu
+	// so the upper TG branch and Solo Edit follow the lower selected TG.
 	bool bHandled = true;
 	switch (Event)
 	{
-	case CUIButton::BtnEventTG1: m_nExtendedMixerTG = 0; break;
-	case CUIButton::BtnEventTG2: m_nExtendedMixerTG = 1; break;
-	case CUIButton::BtnEventTG3: m_nExtendedMixerTG = 2; break;
-	case CUIButton::BtnEventTG4: m_nExtendedMixerTG = 3; break;
-	case CUIButton::BtnEventTG5: m_nExtendedMixerTG = 4; break;
-	case CUIButton::BtnEventTG6: m_nExtendedMixerTG = 5; break;
-	case CUIButton::BtnEventTG7: m_nExtendedMixerTG = 6; break;
-	case CUIButton::BtnEventTG8: m_nExtendedMixerTG = 7; break;
+	case CUIButton::BtnEventTG1: m_nExtendedMixerTG = 0; m_Menu.EventHandler (CUIMenu::MenuEventTG1); break;
+	case CUIButton::BtnEventTG2: m_nExtendedMixerTG = 1; m_Menu.EventHandler (CUIMenu::MenuEventTG2); break;
+	case CUIButton::BtnEventTG3: m_nExtendedMixerTG = 2; m_Menu.EventHandler (CUIMenu::MenuEventTG3); break;
+	case CUIButton::BtnEventTG4: m_nExtendedMixerTG = 3; m_Menu.EventHandler (CUIMenu::MenuEventTG4); break;
+	case CUIButton::BtnEventTG5: m_nExtendedMixerTG = 4; m_Menu.EventHandler (CUIMenu::MenuEventTG5); break;
+	case CUIButton::BtnEventTG6: m_nExtendedMixerTG = 5; m_Menu.EventHandler (CUIMenu::MenuEventTG6); break;
+	case CUIButton::BtnEventTG7: m_nExtendedMixerTG = 6; m_Menu.EventHandler (CUIMenu::MenuEventTG7); break;
+	case CUIButton::BtnEventTG8: m_nExtendedMixerTG = 7; m_Menu.EventHandler (CUIMenu::MenuEventTG8); break;
 
 	// Preferred eight Performance IE MIDI buttons:
 	// Voice, Volume, Pan, Reverb Send, Delay Send, Detune, Octave, Shift Note.
@@ -1613,17 +2029,20 @@ void CUserInterface::UIButtonsEventHandler (CUIButton::BtnEvent Event)
 		break;
 
 	case CUIButton::BtnEventAltPot:
-		m_Menu.EventHandler (CUIMenu::MenuEventAltPot);
+		// Optional direct AltPot page button: show the current bank on Page C.
+		EnterExtendedAltPotPage ();
 		break;
 	case CUIButton::BtnEventAltPotPrev:
-		m_Menu.EventHandler (CUIMenu::MenuEventAltPotPrev);
+		m_pMiniDexed->SelectPreviousAltPotBank ();
+		EnterExtendedAltPotPage ();
 		break;
 
 	case CUIButton::BtnEventAltPotNext:
-		m_Menu.EventHandler (CUIMenu::MenuEventAltPotNext);
+		m_pMiniDexed->SelectNextAltPotBank ();
+		EnterExtendedAltPotPage ();
 		break;
-	case CUIButton::BtnEventAltPotMode:
-		m_Menu.EventHandler (CUIMenu::MenuEventAltPotMode);
+	case CUIButton::BtnEventUIPage:
+		ToggleExtendedABPage ();
 		break;
 
 	default:

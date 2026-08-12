@@ -88,7 +88,7 @@ public:
 		BtnEventAltPot = 39,
 		BtnEventAltPotPrev = 40,
 		BtnEventAltPotNext = 41,
-		BtnEventAltPotMode = 42,
+		BtnEventUIPage = 42,
 		BtnEventTGDelaySend = 43,
 		BtnEventTGShift = 44,
 		BtnEventUnknown = 45
@@ -242,7 +242,7 @@ private:
 	unsigned m_AltPotMidi;
 	unsigned m_AltPotPrevMidi;
 	unsigned m_AltPotNextMidi;
-	unsigned m_AltPotModeMidi;
+	unsigned m_UIPageMidi;
 
 	BtnEventHandler *m_eventHandler;
 	void *m_eventParam;

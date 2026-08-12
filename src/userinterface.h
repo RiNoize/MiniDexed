@@ -86,11 +86,19 @@ private:
 	void Encoder2EventHandler (CKY040::TEvent Event);
 	static void Encoder2EventStub (CKY040::TEvent Event, void *pParam);
 	static void ExtendedBlinkTimerHandler (TKernelTimerHandle hTimer, void *pParam, void *pContext);
+	static void ExtendedAltPotOverlayTimerHandler (TKernelTimerHandle hTimer, void *pParam, void *pContext);
 	void ArmExtendedBlinkTimer (void);
 	void DisplayExtendedMixer (void);
+	void DisplayExtendedContextPage (void);
+	void DisplayExtendedAltPotPage (void);
+	void ToggleExtendedABPage (void);
+	void EnterExtendedAltPotPage (void);
 	void AdjustExtendedMixerValue (int nDirection);
 	void SelectExtendedMixerTG (int nDirection);
 	void SelectExtendedMixerParameter (int nDirection);
+	void SelectExtendedQuickParameter (int nDirection);
+	void AdjustExtendedQuickValue (int nDirection);
+	void UpdateExtendedQuickContext (const char *pMenu, const char *pValue);
 	void ProcessEncoder2Events (void);
 	bool SyncExtendedFromUIButtonEvent (CUIButton::BtnEvent Event);
 	void UIButtonsEventHandler (CUIButton::BtnEvent Event);
@@ -129,6 +137,14 @@ private:
 	unsigned m_nExtendedMixerTG;
 	unsigned m_nExtendedMixerParameter;
 	unsigned m_nExtendedLastPerformanceID;
+	unsigned m_nExtendedPage;
+	unsigned m_nExtendedPreviousABPage;
+	unsigned m_nExtendedQuickContext;
+	unsigned m_nExtendedQuickParameter;
+	bool m_bExtendedQuickEdit;
+	bool m_bAltPotBankOverlayActive;
+	unsigned m_nAltPotBankOverlaySequence;
+	unsigned m_nAltPotActiveControl;
 
 	// MIDI monitor state. Only a small prefix of SysEx is retained; length is exact.
 	CSpinLock m_MIDIMonitorLock;

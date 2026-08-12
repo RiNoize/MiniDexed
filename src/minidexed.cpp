@@ -1973,6 +1973,14 @@ CMiniDexed::TAltPotBank CMiniDexed::GetAltPotBank (void) const
 
 const char *CMiniDexed::GetAltPotBankName (void) const
 {
+	// AltPot now boots and operates as the Performance macro row.  Keep the
+	// old Individual banks internally for compatibility, but the user-facing
+	// bank name in Global mode describes the eight macro controls.
+	if (IsAltPotGlobalMode ())
+	{
+		return "Global Macro";
+	}
+
 	switch (m_AltPotBank)
 	{
 	case AltPotBankOctave:		return "Octave";
@@ -2030,14 +2038,14 @@ const char *CMiniDexed::GetAltPotGlobalControlShortName (unsigned nControl) cons
 {
 	switch (nControl)
 	{
-	case AltPotGlobalAmpAttack:		return "Atk";
-	case AltPotGlobalAmpRelease:		return "Rel";
-	case AltPotGlobalCutoff:			return "Cut";
-	case AltPotGlobalResonance:		return "Res";
-	case AltPotGlobalDryLevel:		return "Dry";
-	case AltPotGlobalReverbSend:		return "Rev";
-	case AltPotGlobalDelaySend:		return "Dly";
-	case AltPotGlobalPortamentoTime:	return "Por";
+	case AltPotGlobalAmpAttack:		return "ATK";
+	case AltPotGlobalAmpRelease:		return "REL";
+	case AltPotGlobalCutoff:			return "CUT";
+	case AltPotGlobalResonance:		return "RES";
+	case AltPotGlobalDryLevel:		return "DRY";
+	case AltPotGlobalReverbSend:		return "REV";
+	case AltPotGlobalDelaySend:		return "DLY";
+	case AltPotGlobalPortamentoTime:	return "PRT";
 	default:				return "---";
 	}
 }

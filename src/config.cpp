@@ -248,7 +248,11 @@ void CConfig::Load (void)
 	m_nMIDIButtonAltPot = m_Properties.GetNumber ("MIDIButtonAltPot", 0);
 	m_nMIDIButtonAltPotPrev = m_Properties.GetNumber ("MIDIButtonAltPotPrev", 0);
 	m_nMIDIButtonAltPotNext = m_Properties.GetNumber ("MIDIButtonAltPotNext", 0);
-	m_nMIDIButtonAltPotMode = m_Properties.GetNumber ("MIDIButtonAltPotMode", 0);
+	// Page A/B replaces the old AltPot Global/Individual mode button.
+	// Backward compatibility: if MIDIButtonUIPage is not present, keep using
+	// the old MIDIButtonAltPotMode note number from existing SD cards.
+	m_nMIDIButtonUIPage = m_Properties.GetNumber ("MIDIButtonUIPage",
+						 m_Properties.GetNumber ("MIDIButtonAltPotMode", 0));
 	
 	m_bEncoderEnabled = m_Properties.GetNumber ("EncoderEnabled", 0) != 0;
 	m_nEncoderPinClock = m_Properties.GetNumber ("EncoderPinClock", 10);
@@ -975,9 +979,9 @@ unsigned CConfig::GetMIDIButtonAltPotNext (void) const
 	return m_nMIDIButtonAltPotNext;
 }
 
-unsigned CConfig::GetMIDIButtonAltPotMode (void) const
+unsigned CConfig::GetMIDIButtonUIPage (void) const
 {
-	return m_nMIDIButtonAltPotMode;
+	return m_nMIDIButtonUIPage;
 }
 
 bool CConfig::GetEncoderEnabled (void) const
