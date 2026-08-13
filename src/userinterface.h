@@ -98,7 +98,7 @@ private:
 	void SelectExtendedMixerParameter (int nDirection);
 	void SelectExtendedQuickParameter (int nDirection);
 	void AdjustExtendedQuickValue (int nDirection);
-	void UpdateExtendedQuickContext (const char *pMenu, const char *pValue);
+	void UpdateExtendedQuickContext (const char *pMenu, const char *pParam, const char *pValue);
 	void ProcessEncoder2Events (void);
 	bool SyncExtendedFromUIButtonEvent (CUIButton::BtnEvent Event);
 	void UIButtonsEventHandler (CUIButton::BtnEvent Event);

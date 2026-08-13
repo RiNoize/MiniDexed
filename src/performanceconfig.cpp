@@ -170,7 +170,7 @@ bool CPerformanceConfig::Load (void)
 		m_nReverbSend[nTG] = m_Properties.GetNumber (PropertyName, 50);
 
 		PropertyName.Format ("DelaySend%u", nTG+1);
-		m_nDelaySend[nTG] = m_Properties.GetNumber (PropertyName, 0);
+		m_nDelaySend[nTG] = m_Properties.GetNumber (PropertyName, 50);
 		
 		PropertyName.Format ("PitchBendRange%u", nTG+1);
 		m_nPitchBendRange[nTG] = m_Properties.GetNumber (PropertyName, 2);
@@ -230,7 +230,7 @@ bool CPerformanceConfig::Load (void)
 	m_nReverbLevel = m_Properties.GetNumber ("ReverbLevel", 99);
 
 	// New delay bus. Old performances remain dry-compatible because DelayEnable
-	// and every DelaySend default to zero.
+	// and every DelaySend default to 50 so enabling Delay is immediately audible.
 	m_bDelayEnable = m_Properties.GetNumber ("DelayEnable", 0) != 0;
 	m_nDelayMode = m_Properties.GetNumber ("DelayMode", 2);           // PingPong
 	m_nDelayTempo = m_Properties.GetNumber ("DelayTempo", 120);

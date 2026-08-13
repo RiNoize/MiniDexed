@@ -181,6 +181,13 @@ public:
 	// Must match the order in CUIMenu::TParameter
 	enum TAltPotBank
 	{
+		// Global Performance macro banks. These are the normal/default AltPot mode.
+		AltPotBankGlobalMain,
+		AltPotBankEnvMorph,
+		AltPotBankLFOMotion,
+		AltPotBankFMColor,
+
+		// Legacy Individual banks retained internally for compatibility.
 		AltPotBankOctave,
 		AltPotBankNoteShift,
 		AltPotBankUnknown
@@ -342,6 +349,10 @@ private:
 	void UpdateReverbSendGain (unsigned nTG);
 	void UpdateDelaySendGain (unsigned nTG);
 	void SetGlobalAmpEnvelopeRate (unsigned nValue, bool bRelease);
+	void SetGlobalEnvelopeMacro (unsigned nValue, bool bRelease, unsigned nTarget);
+	void SetGlobalVoiceParameterValue (uint8_t nOffset, unsigned nValue);
+	void SetGlobalOperatorParameterValue (uint8_t nOffset, unsigned nValue, bool bCarriers);
+	void SetGlobalOperatorDetuneSpread (unsigned nValue, bool bCarriers);
 	uint8_t GetCarrierMask (unsigned nTG);
 	const char* GetNetworkDeviceShortName() const;
 

@@ -389,6 +389,7 @@ const CUIMenu::TMenuItem CUIMenu::s_PerformanceMenu[] =
 	{"Bank",	EditPerformanceBankNumber, 0, 0},
 	{"PCCH",	EditGlobalParameter,	0,	CMiniDexed::ParameterPerformanceSelectChannel},
 	{"Filter Type",	EditPerformanceFilterType, 0, 0},
+	{"Effects",	MenuHandler,	s_EffectsMenu},
 	{0}
 };
 

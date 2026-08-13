@@ -81,7 +81,7 @@ CMiniDexed::CMiniDexed (CConfig *pConfig, CInterruptSystem *pInterrupt,
 	assert (m_pConfig);
 		
 	m_nToneGenerators = m_pConfig->GetToneGenerators();
-	m_AltPotBank = AltPotBankOctave;
+	m_AltPotBank = AltPotBankGlobalMain;
 	m_AltPotMode = AltPotModeGlobal;
 	m_bTGSoloEnabled = false;
 	m_nTGSoloTG = 0;
@@ -122,7 +122,7 @@ CMiniDexed::CMiniDexed (CConfig *pConfig, CInterruptSystem *pInterrupt,
 		m_nAftertouchTarget[i]=0;
 		
 		m_nReverbSend[i] = 0;
-		m_nDelaySend[i] = 0;
+		m_nDelaySend[i] = 50;
 
 		// Active the required number of active TGs
 		if (i<m_nToneGenerators)
@@ -1931,16 +1931,36 @@ void CMiniDexed::CopyTG (unsigned nFromTG, unsigned nToTG)
 
 void CMiniDexed::SelectPreviousAltPotBank (void)
 {
-	// Global currently has one fixed bank of eight macros.  Prev/Next are
-	// intentionally reserved for future Global banks.
-	if (IsAltPotGlobalMode ()) return;
+	if (IsAltPotGlobalMode ())
+	{
+		switch (m_AltPotBank)
+		{
+		case AltPotBankGlobalMain: m_AltPotBank = AltPotBankFMColor; break;
+		case AltPotBankEnvMorph:   m_AltPotBank = AltPotBankGlobalMain; break;
+		case AltPotBankLFOMotion:  m_AltPotBank = AltPotBankEnvMorph; break;
+		case AltPotBankFMColor:    m_AltPotBank = AltPotBankLFOMotion; break;
+		default:                   m_AltPotBank = AltPotBankGlobalMain; break;
+		}
+		return;
+	}
 	m_AltPotBank = (m_AltPotBank == AltPotBankOctave) ?
 		AltPotBankNoteShift : AltPotBankOctave;
 }
 
 void CMiniDexed::SelectNextAltPotBank (void)
 {
-	if (IsAltPotGlobalMode ()) return;
+	if (IsAltPotGlobalMode ())
+	{
+		switch (m_AltPotBank)
+		{
+		case AltPotBankGlobalMain: m_AltPotBank = AltPotBankEnvMorph; break;
+		case AltPotBankEnvMorph:   m_AltPotBank = AltPotBankLFOMotion; break;
+		case AltPotBankLFOMotion:  m_AltPotBank = AltPotBankFMColor; break;
+		case AltPotBankFMColor:    m_AltPotBank = AltPotBankGlobalMain; break;
+		default:                   m_AltPotBank = AltPotBankGlobalMain; break;
+		}
+		return;
+	}
 	m_AltPotBank = (m_AltPotBank == AltPotBankOctave) ?
 		AltPotBankNoteShift : AltPotBankOctave;
 }
@@ -1973,12 +1993,16 @@ CMiniDexed::TAltPotBank CMiniDexed::GetAltPotBank (void) const
 
 const char *CMiniDexed::GetAltPotBankName (void) const
 {
-	// AltPot now boots and operates as the Performance macro row.  Keep the
-	// old Individual banks internally for compatibility, but the user-facing
-	// bank name in Global mode describes the eight macro controls.
 	if (IsAltPotGlobalMode ())
 	{
-		return "Global Macro";
+		switch (m_AltPotBank)
+		{
+		case AltPotBankGlobalMain: return "Global Macro";
+		case AltPotBankEnvMorph:   return "ENV Morph";
+		case AltPotBankLFOMotion:  return "LFO Motion";
+		case AltPotBankFMColor:    return "FM Color";
+		default:                   return "Global Macro";
+		}
 	}
 
 	switch (m_AltPotBank)
@@ -2001,52 +2025,71 @@ CMiniDexed::TTGParameter CMiniDexed::GetAltPotTGParameter (void) const
 
 CMiniDexed::TTGParameter CMiniDexed::GetAltPotGlobalTGParameter (unsigned nControl) const
 {
+	if (m_AltPotBank != AltPotBankGlobalMain)
+	{
+		return TGParameterUnknown;
+	}
+
 	switch (nControl)
 	{
-	case AltPotGlobalCutoff:			return TGParameterCutoff;
-	case AltPotGlobalResonance:		return TGParameterResonance;
-	case AltPotGlobalPortamentoTime:	return TGParameterPortamentoTime;
-
-	// These are Performance macros rather than one stored TG parameter.
-	case AltPotGlobalAmpAttack:
-	case AltPotGlobalAmpRelease:
-	case AltPotGlobalDryLevel:
-	case AltPotGlobalReverbSend:
-	case AltPotGlobalDelaySend:
-	default:
-		return TGParameterUnknown;
+	case AltPotGlobalCutoff:                 return TGParameterCutoff;
+	case AltPotGlobalResonance:              return TGParameterResonance;
+	case AltPotGlobalPortamentoTime:         return TGParameterPortamentoTime;
+	default:                                 return TGParameterUnknown;
 	}
 }
 
 const char *CMiniDexed::GetAltPotGlobalControlName (unsigned nControl) const
 {
-	switch (nControl)
+	if (nControl >= 8) return "---";
+
+	static const char *MainName[8] =
 	{
-	case AltPotGlobalAmpAttack:		return "Amp Attack";
-	case AltPotGlobalAmpRelease:		return "Amp Release";
-	case AltPotGlobalCutoff:			return "Cutoff";
-	case AltPotGlobalResonance:		return "Resonance";
-	case AltPotGlobalDryLevel:		return "Dry Level";
-	case AltPotGlobalReverbSend:		return "Reverb Send";
-	case AltPotGlobalDelaySend:		return "Delay Send";
-	case AltPotGlobalPortamentoTime:	return "Portamento";
-	default:				return "---";
+		"Amp Attack", "Amp Release", "Cutoff", "Resonance",
+		"Dry Level", "Reverb Send", "Delay Send", "Portamento"
+	};
+	static const char *EnvName[8] =
+	{
+		"Carrier Attack", "Mod Attack", "All Attack", "Cross Attack",
+		"Carrier Release", "Mod Release", "All Release", "Cross Release"
+	};
+	static const char *LFOName[8] =
+	{
+		"LFO Speed", "LFO Delay", "Pitch Mod", "Amp Mod",
+		"Pitch Sens", "LFO Wave", "Mod AMS", "Carrier AMS"
+	};
+	static const char *ColorName[8] =
+	{
+		"Feedback", "Algorithm", "Mod Level", "Carrier Level",
+		"Mod Detune", "Carrier Detune", "Mod Rate Scale", "Mod Velocity"
+	};
+
+	switch (m_AltPotBank)
+	{
+	case AltPotBankEnvMorph:  return EnvName[nControl];
+	case AltPotBankLFOMotion: return LFOName[nControl];
+	case AltPotBankFMColor:   return ColorName[nControl];
+	case AltPotBankGlobalMain:
+	default:                  return MainName[nControl];
 	}
 }
 
 const char *CMiniDexed::GetAltPotGlobalControlShortName (unsigned nControl) const
 {
-	switch (nControl)
+	if (nControl >= 8) return "---";
+
+	static const char *MainShort[8]  = {"ATK", "REL", "CUT", "RES", "DRY", "REV", "DLY", "PRT"};
+	static const char *EnvShort[8]   = {"AC",  "AM",  "AA",  "AX",  "RC",  "RM",  "RA",  "RX"};
+	static const char *LFOShort[8]   = {"SPD", "DLY", "PMD", "AMD", "PMS", "WAV", "MAM", "CAM"};
+	static const char *ColorShort[8] = {"FDB", "ALG", "MLV", "CLV", "MDT", "CDT", "MRS", "MVS"};
+
+	switch (m_AltPotBank)
 	{
-	case AltPotGlobalAmpAttack:		return "ATK";
-	case AltPotGlobalAmpRelease:		return "REL";
-	case AltPotGlobalCutoff:			return "CUT";
-	case AltPotGlobalResonance:		return "RES";
-	case AltPotGlobalDryLevel:		return "DRY";
-	case AltPotGlobalReverbSend:		return "REV";
-	case AltPotGlobalDelaySend:		return "DLY";
-	case AltPotGlobalPortamentoTime:	return "PRT";
-	default:				return "---";
+	case AltPotBankEnvMorph:  return EnvShort[nControl];
+	case AltPotBankLFOMotion: return LFOShort[nControl];
+	case AltPotBankFMColor:   return ColorShort[nControl];
+	case AltPotBankGlobalMain:
+	default:                  return MainShort[nControl];
 	}
 }
 
@@ -2090,6 +2133,74 @@ void CMiniDexed::SetGlobalAmpEnvelopeRate (unsigned nValue, bool bRelease)
 			{
 				SetVoiceParameter(nOffset, nRate, nOP, nTG);
 			}
+		}
+	}
+	m_UI.ParameterChanged();
+}
+
+
+void CMiniDexed::SetGlobalEnvelopeMacro (unsigned nValue, bool bRelease, unsigned nTarget)
+{
+	// nTarget: 0=carriers, 1=modulators, 2=all, 3=cross morph.
+	const unsigned nTime = constrain((int) nValue, 0, 99);
+	const uint8_t nCarrierRate = (uint8_t) (99 - nTime);
+	const uint8_t nModRate = (nTarget == 3) ? (uint8_t) nTime : nCarrierRate;
+	const uint8_t nOffset = bRelease ? DEXED_OP_EG_R4 : DEXED_OP_EG_R1;
+
+	for (unsigned nTG = 0; nTG < m_nToneGenerators; nTG++)
+	{
+		const uint8_t nCarrierMask = GetCarrierMask(nTG);
+		for (unsigned nOP = 0; nOP < 6; nOP++)
+		{
+			const bool bCarrier = (nCarrierMask & (1u << nOP)) != 0;
+			if (nTarget == 0 && !bCarrier) continue;
+			if (nTarget == 1 && bCarrier) continue;
+			SetVoiceParameter(nOffset, bCarrier ? nCarrierRate : nModRate, nOP, nTG);
+		}
+	}
+	m_UI.ParameterChanged();
+}
+
+void CMiniDexed::SetGlobalVoiceParameterValue (uint8_t nOffset, unsigned nValue)
+{
+	for (unsigned nTG = 0; nTG < m_nToneGenerators; nTG++)
+	{
+		SetVoiceParameter(nOffset, (uint8_t) nValue, NoOP, nTG);
+	}
+	m_UI.ParameterChanged();
+}
+
+void CMiniDexed::SetGlobalOperatorParameterValue (uint8_t nOffset, unsigned nValue, bool bCarriers)
+{
+	for (unsigned nTG = 0; nTG < m_nToneGenerators; nTG++)
+	{
+		const uint8_t nCarrierMask = GetCarrierMask(nTG);
+		for (unsigned nOP = 0; nOP < 6; nOP++)
+		{
+			const bool bCarrier = (nCarrierMask & (1u << nOP)) != 0;
+			if (bCarrier == bCarriers)
+			{
+				SetVoiceParameter(nOffset, (uint8_t) nValue, nOP, nTG);
+			}
+		}
+	}
+	m_UI.ParameterChanged();
+}
+
+void CMiniDexed::SetGlobalOperatorDetuneSpread (unsigned nValue, bool bCarriers)
+{
+	const int nSpread = constrain((int) nValue, 0, 7);
+	for (unsigned nTG = 0; nTG < m_nToneGenerators; nTG++)
+	{
+		const uint8_t nCarrierMask = GetCarrierMask(nTG);
+		unsigned nSelected = 0;
+		for (unsigned nOP = 0; nOP < 6; nOP++)
+		{
+			const bool bCarrier = (nCarrierMask & (1u << nOP)) != 0;
+			if (bCarrier != bCarriers) continue;
+			int nDetune = (nSelected++ & 1U) ? 7 + nSpread : 7 - nSpread;
+			nDetune = constrain(nDetune, 0, 14);
+			SetVoiceParameter(DEXED_OP_OSC_DETUNE, (uint8_t) nDetune, nOP, nTG);
 		}
 	}
 	m_UI.ParameterChanged();
@@ -2149,71 +2260,133 @@ int CMiniDexed::SetAltPotValue (unsigned nValue, unsigned nTG)
 
 int CMiniDexed::SetAltPotGlobalValue (unsigned nValue, unsigned nControl)
 {
-	if (nControl >= 8)
-	{
-		return 0;
-	}
+	if (nControl >= 8) return 0;
 
 	int nConvertedValue = 0;
 
-	switch (nControl)
+	if (m_AltPotBank == AltPotBankEnvMorph)
 	{
-	case AltPotGlobalAmpAttack:
 		nConvertedValue = (int) ((nValue * 99 + 63) / 127);
-		SetGlobalAmpEnvelopeRate((unsigned) nConvertedValue, false);
-		break;
-
-	case AltPotGlobalAmpRelease:
-		nConvertedValue = (int) ((nValue * 99 + 63) / 127);
-		SetGlobalAmpEnvelopeRate((unsigned) nConvertedValue, true);
-		break;
-
-	case AltPotGlobalCutoff:
-		nConvertedValue = (int) ((nValue * 99 + 63) / 127);
-		for (unsigned nTG = 0; nTG < m_nToneGenerators; nTG++)
+		const bool bRelease = nControl >= 4;
+		const unsigned nTarget = nControl & 3U; // C, M, All, Cross
+		SetGlobalEnvelopeMacro((unsigned) nConvertedValue, bRelease, nTarget);
+	}
+	else if (m_AltPotBank == AltPotBankLFOMotion)
+	{
+		switch (nControl)
 		{
-			SetTGParameter (TGParameterCutoff, nConvertedValue, nTG);
+		case 0: // Speed
+			nConvertedValue = (int) ((nValue * 99 + 63) / 127);
+			SetGlobalVoiceParameterValue(DEXED_LFO_SPEED, nConvertedValue);
+			break;
+		case 1: // Delay
+			nConvertedValue = (int) ((nValue * 99 + 63) / 127);
+			SetGlobalVoiceParameterValue(DEXED_LFO_DELAY, nConvertedValue);
+			break;
+		case 2: // Pitch modulation depth
+			nConvertedValue = (int) ((nValue * 99 + 63) / 127);
+			SetGlobalVoiceParameterValue(DEXED_LFO_PITCH_MOD_DEP, nConvertedValue);
+			break;
+		case 3: // Amplitude modulation depth
+			nConvertedValue = (int) ((nValue * 99 + 63) / 127);
+			SetGlobalVoiceParameterValue(DEXED_LFO_AMP_MOD_DEP, nConvertedValue);
+			break;
+		case 4: // Pitch modulation sensitivity
+			nConvertedValue = (int) ((nValue * 7 + 63) / 127);
+			SetGlobalVoiceParameterValue(DEXED_LFO_PITCH_MOD_SENS, nConvertedValue);
+			break;
+		case 5: // LFO waveform
+			nConvertedValue = (int) ((nValue * 5 + 63) / 127);
+			SetGlobalVoiceParameterValue(DEXED_LFO_WAVE, nConvertedValue);
+			break;
+		case 6: // AMS on modulators
+			nConvertedValue = (int) ((nValue * 3 + 63) / 127);
+			SetGlobalOperatorParameterValue(DEXED_OP_AMP_MOD_SENS, nConvertedValue, false);
+			break;
+		case 7: // AMS on carriers
+			nConvertedValue = (int) ((nValue * 3 + 63) / 127);
+			SetGlobalOperatorParameterValue(DEXED_OP_AMP_MOD_SENS, nConvertedValue, true);
+			break;
 		}
-		break;
-
-	case AltPotGlobalResonance:
-		nConvertedValue = (int) ((nValue * 99 + 63) / 127);
-		for (unsigned nTG = 0; nTG < m_nToneGenerators; nTG++)
+	}
+	else if (m_AltPotBank == AltPotBankFMColor)
+	{
+		switch (nControl)
 		{
-			SetTGParameter (TGParameterResonance, nConvertedValue, nTG);
+		case 0: // Feedback
+			nConvertedValue = (int) ((nValue * 7 + 63) / 127);
+			SetGlobalVoiceParameterValue(DEXED_FEEDBACK, nConvertedValue);
+			break;
+		case 1: // Algorithm -- deliberately transformative / experimental
+			nConvertedValue = (int) ((nValue * 31 + 63) / 127);
+			SetGlobalVoiceParameterValue(DEXED_ALGORITHM, nConvertedValue);
+			break;
+		case 2: // Modulator output level
+			nConvertedValue = (int) ((nValue * 99 + 63) / 127);
+			SetGlobalOperatorParameterValue(DEXED_OP_OUTPUT_LEV, nConvertedValue, false);
+			break;
+		case 3: // Carrier output level
+			nConvertedValue = (int) ((nValue * 99 + 63) / 127);
+			SetGlobalOperatorParameterValue(DEXED_OP_OUTPUT_LEV, nConvertedValue, true);
+			break;
+		case 4: // Modulator detune spread around DX center value 7
+			nConvertedValue = (int) ((nValue * 7 + 63) / 127);
+			SetGlobalOperatorDetuneSpread(nConvertedValue, false);
+			break;
+		case 5: // Carrier detune spread
+			nConvertedValue = (int) ((nValue * 7 + 63) / 127);
+			SetGlobalOperatorDetuneSpread(nConvertedValue, true);
+			break;
+		case 6: // Modulator rate scaling
+			nConvertedValue = (int) ((nValue * 7 + 63) / 127);
+			SetGlobalOperatorParameterValue(DEXED_OP_OSC_RATE_SCALE, nConvertedValue, false);
+			break;
+		case 7: // Modulator key velocity sensitivity
+			nConvertedValue = (int) ((nValue * 7 + 63) / 127);
+			SetGlobalOperatorParameterValue(DEXED_OP_KEY_VEL_SENS, nConvertedValue, false);
+			break;
 		}
-		break;
-
-	case AltPotGlobalDryLevel:
-		nConvertedValue = (int) ((nValue * 99 + 63) / 127);
-		SetParameter(ParameterDryLevel, nConvertedValue);
-		break;
-
-	case AltPotGlobalReverbSend:
-		// Global macro/trim. Individual ReverbSend1..8 values remain intact.
-		nConvertedValue = (int) ((nValue * 99 + 63) / 127);
-		SetParameter(ParameterReverbSendTrim, nConvertedValue);
-		break;
-
-	case AltPotGlobalDelaySend:
-		// Global macro/trim. Individual DelaySend1..8 values remain intact.
-		nConvertedValue = (int) ((nValue * 99 + 63) / 127);
-		SetParameter(ParameterDelaySendTrim, nConvertedValue);
-		break;
-
-	case AltPotGlobalPortamentoTime:
-		nConvertedValue = (int) ((nValue * 99 + 63) / 127);
-		for (unsigned nTG = 0; nTG < m_nToneGenerators; nTG++)
+	}
+	else // AltPotBankGlobalMain and compatibility fallback
+	{
+		switch (nControl)
 		{
-			SetTGParameter (TGParameterPortamentoTime, nConvertedValue, nTG);
+		case AltPotGlobalAmpAttack:
+			nConvertedValue = (int) ((nValue * 99 + 63) / 127);
+			SetGlobalAmpEnvelopeRate((unsigned) nConvertedValue, false);
+			break;
+		case AltPotGlobalAmpRelease:
+			nConvertedValue = (int) ((nValue * 99 + 63) / 127);
+			SetGlobalAmpEnvelopeRate((unsigned) nConvertedValue, true);
+			break;
+		case AltPotGlobalCutoff:
+			nConvertedValue = (int) ((nValue * 99 + 63) / 127);
+			for (unsigned nTG = 0; nTG < m_nToneGenerators; nTG++) SetTGParameter(TGParameterCutoff, nConvertedValue, nTG);
+			break;
+		case AltPotGlobalResonance:
+			nConvertedValue = (int) ((nValue * 99 + 63) / 127);
+			for (unsigned nTG = 0; nTG < m_nToneGenerators; nTG++) SetTGParameter(TGParameterResonance, nConvertedValue, nTG);
+			break;
+		case AltPotGlobalDryLevel:
+			nConvertedValue = (int) ((nValue * 99 + 63) / 127);
+			SetParameter(ParameterDryLevel, nConvertedValue);
+			break;
+		case AltPotGlobalReverbSend:
+			nConvertedValue = (int) ((nValue * 99 + 63) / 127);
+			SetParameter(ParameterReverbSendTrim, nConvertedValue);
+			break;
+		case AltPotGlobalDelaySend:
+			nConvertedValue = (int) ((nValue * 99 + 63) / 127);
+			SetParameter(ParameterDelaySendTrim, nConvertedValue);
+			break;
+		case AltPotGlobalPortamentoTime:
+			nConvertedValue = (int) ((nValue * 99 + 63) / 127);
+			for (unsigned nTG = 0; nTG < m_nToneGenerators; nTG++) SetTGParameter(TGParameterPortamentoTime, nConvertedValue, nTG);
+			break;
 		}
-		break;
-
-	default:
-		break;
 	}
 
-	m_UI.ShowAltPotController (nControl, GetAltPotGlobalControlName (nControl), nConvertedValue);
+	m_UI.ShowAltPotController(nControl, GetAltPotGlobalControlName(nControl), nConvertedValue);
 	return nConvertedValue;
 }
 

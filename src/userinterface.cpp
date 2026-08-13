@@ -79,7 +79,8 @@ namespace
 	{
 		ExtendedQuickNone = 0,
 		ExtendedQuickDelay,
-		ExtendedQuickReverb
+		ExtendedQuickReverb,
+		ExtendedQuickFilterType
 	};
 
 	struct TExtendedQuickParameter
@@ -143,6 +144,25 @@ namespace
 		case AudioEffectDreamDelay::T1_32:  return "32";
 		case AudioEffectDreamDelay::T1_32T: return "32T";
 		default:                            return "---";
+		}
+	}
+
+	static const char *FilterTypeShortName (unsigned nValue)
+	{
+		switch (nValue)
+		{
+		case CMiniDexed::FilterTypeOff:       return "OFF";
+		case CMiniDexed::FilterTypeClassic:   return "CLA";
+		case CMiniDexed::FilterTypeZynLP2P:   return "ZLP";
+		case CMiniDexed::FilterTypeZynBP2P:   return "ZBP";
+		case CMiniDexed::FilterTypeZynHP2P:   return "ZHP";
+		case CMiniDexed::FilterTypeZynNotch:  return "ZNT";
+		case CMiniDexed::FilterTypeZynPeak:   return "ZPK";
+		case CMiniDexed::FilterTypeDDWarmLPF: return "WLP";
+		case CMiniDexed::FilterTypeTwinPeak:  return "TWN";
+		case CMiniDexed::FilterTypeAnalogLP4P:return "A4P";
+		case CMiniDexed::FilterTypeLadderLPF: return "LAD";
+		default:                              return "---";
 		}
 	}
 
@@ -775,7 +795,7 @@ void CUserInterface::DisplayWrite (const char *pMenu, const char *pParam, const 
 
 	// Page B follows Encoder 1 / the original UI.  Every top-screen draw is
 	// therefore also an opportunity to refresh the lower contextual page.
-	UpdateExtendedQuickContext (pMenu, pValue);
+	UpdateExtendedQuickContext (pMenu, pParam, pValue);
 	m_bExtendedRedrawPending = true;
 }
 
@@ -1241,7 +1261,7 @@ void CUserInterface::DisplayExtendedMixer (void)
 				     nInvertStart, nInvertLength, true);
 }
 
-void CUserInterface::UpdateExtendedQuickContext (const char *pMenu, const char *pValue)
+void CUserInterface::UpdateExtendedQuickContext (const char *pMenu, const char *pParam, const char *pValue)
 {
 	unsigned nNewContext = ExtendedQuickNone;
 	if (pMenu && strcmp (pMenu, "Delay") == 0)
@@ -1252,6 +1272,10 @@ void CUserInterface::UpdateExtendedQuickContext (const char *pMenu, const char *
 	{
 		nNewContext = ExtendedQuickReverb;
 	}
+	else if (pParam && strcmp (pParam, "Filter Type") == 0)
+	{
+		nNewContext = ExtendedQuickFilterType;
+	}
 	else if (pMenu && pValue && strcmp (pMenu, "Effects") == 0)
 	{
 		if (strcmp (pValue, "Delay") == 0) nNewContext = ExtendedQuickDelay;
@@ -1261,9 +1285,42 @@ void CUserInterface::UpdateExtendedQuickContext (const char *pMenu, const char *
 	if (nNewContext != m_nExtendedQuickContext)
 	{
 		m_nExtendedQuickContext = nNewContext;
-		m_nExtendedQuickParameter = 0;
+		m_nExtendedQuickParameter = (nNewContext == ExtendedQuickFilterType)
+			? m_pMiniDexed->GetPerformanceFilterType () : 0;
 		m_bExtendedQuickEdit = false;
 		m_bExtendedBlinkOn = true;
+	}
+
+	// When Encoder 1 moves through an FX submenu, Page B follows that exact
+	// parameter. Encoder 2 may still move the Page-B cursor independently; once
+	// it enters edit mode we stop auto-follow so its edits cannot snap back.
+	if (!m_bExtendedQuickEdit && pParam)
+	{
+		if (nNewContext == ExtendedQuickDelay)
+		{
+			if      (strcmp (pParam, "Enable") == 0)   m_nExtendedQuickParameter = 0;
+			else if (strcmp (pParam, "Mode") == 0)     m_nExtendedQuickParameter = 1;
+			else if (strcmp (pParam, "Time L") == 0)   m_nExtendedQuickParameter = 2;
+			else if (strcmp (pParam, "Time R") == 0)   m_nExtendedQuickParameter = 3;
+			else if (strcmp (pParam, "Feedback") == 0) m_nExtendedQuickParameter = 4;
+			else if (strcmp (pParam, "High Cut") == 0) m_nExtendedQuickParameter = 5;
+			else if (strcmp (pParam, "Level") == 0)    m_nExtendedQuickParameter = 6;
+			else if (strcmp (pParam, "Tempo") == 0)    m_nExtendedQuickParameter = 7;
+		}
+		else if (nNewContext == ExtendedQuickReverb)
+		{
+			if      (strcmp (pParam, "Enable") == 0)    m_nExtendedQuickParameter = 0;
+			else if (strcmp (pParam, "Size") == 0)      m_nExtendedQuickParameter = 1;
+			else if (strcmp (pParam, "High damp") == 0) m_nExtendedQuickParameter = 2;
+			else if (strcmp (pParam, "Low damp") == 0)  m_nExtendedQuickParameter = 3;
+			else if (strcmp (pParam, "Low pass") == 0)  m_nExtendedQuickParameter = 4;
+			else if (strcmp (pParam, "Diffusion") == 0) m_nExtendedQuickParameter = 5;
+			else if (strcmp (pParam, "Level") == 0)     m_nExtendedQuickParameter = 6;
+		}
+		else if (nNewContext == ExtendedQuickFilterType)
+		{
+			m_nExtendedQuickParameter = m_pMiniDexed->GetPerformanceFilterType ();
+		}
 	}
 }
 
@@ -1278,11 +1335,34 @@ void CUserInterface::DisplayExtendedContextPage (void)
 
 	if (m_nExtendedQuickContext == ExtendedQuickNone)
 	{
-		const char *pTop = "FX QUICK PAGE B";
-		const char *pBottom = "SELECT DELAY/REV";
+		const char *pTop = "CONTEXT PAGE B";
+		const char *pBottom = "FX / FILTER";
 		memcpy (Line3, pTop, strlen (pTop));
 		memcpy (Line4, pBottom, strlen (pBottom));
 		m_pSSD1306->DrawLowerLines (Line3, Line4, -1, 0, 0, true);
+		return;
+	}
+
+	if (m_nExtendedQuickContext == ExtendedQuickFilterType)
+	{
+		// Eleven filter modes, shown in a moving 8-mode window. Encoder 2 selects
+		// a mode; click toggles audition/edit and rotation while editing applies it.
+		unsigned nSelected = m_nExtendedQuickParameter;
+		if (nSelected >= CMiniDexed::FilterTypeUnknown) nSelected = CMiniDexed::FilterTypeClassic;
+		unsigned nStart = nSelected < 8 ? 0 : CMiniDexed::FilterTypeUnknown - 8;
+		for (unsigned nSlot = 0; nSlot < 8; ++nSlot)
+		{
+			const unsigned nType = nStart + nSlot;
+			if (nType >= CMiniDexed::FilterTypeUnknown) break;
+			char *pLine = nSlot < 4 ? Line3 : Line4;
+			const unsigned nOffset = (nSlot & 3U) * 4U;
+			memcpy (pLine + nOffset, FilterTypeShortName (nType), 3);
+		}
+		const unsigned nSlot = nSelected - nStart;
+		const int nInvertLine = m_bExtendedBlinkOn ? (nSlot < 4 ? 0 : 1) : -1;
+		const unsigned nInvertStart = (nSlot & 3U) * 4U;
+		m_pSSD1306->DrawLowerLines (Line3, Line4, nInvertLine,
+					     nInvertStart, nInvertLine >= 0 ? 3 : 0, true);
 		return;
 	}
 
@@ -1306,9 +1386,10 @@ void CUserInterface::DisplayExtendedContextPage (void)
 
 	const unsigned nSlot = m_nExtendedQuickParameter & 3U;
 	const unsigned nInvertStart = nSlot * 4U;
-	const int nInvertLine = m_bExtendedQuickEdit ? 1 : 0;
+	// The cursor now pulses. Label pulses in select mode; value pulses in edit mode.
+	const int nInvertLine = m_bExtendedBlinkOn ? (m_bExtendedQuickEdit ? 1 : 0) : -1;
 	m_pSSD1306->DrawLowerLines (Line3, Line4, nInvertLine,
-				     nInvertStart, 3, true);
+				     nInvertStart, nInvertLine >= 0 ? 3 : 0, true);
 }
 
 void CUserInterface::DisplayExtendedAltPotPage (void)
@@ -1420,16 +1501,37 @@ void CUserInterface::ExtendedAltPotOverlayTimerHandler (TKernelTimerHandle hTime
 void CUserInterface::SelectExtendedQuickParameter (int nDirection)
 {
 	if (m_nExtendedQuickContext == ExtendedQuickNone) return;
-	if (nDirection > 0)
-		m_nExtendedQuickParameter = (m_nExtendedQuickParameter + 1U) & 7U;
+	if (m_nExtendedQuickContext == ExtendedQuickFilterType)
+	{
+		const unsigned nCount = CMiniDexed::FilterTypeUnknown;
+		if (nDirection > 0) m_nExtendedQuickParameter = (m_nExtendedQuickParameter + 1U) % nCount;
+		else m_nExtendedQuickParameter = (m_nExtendedQuickParameter + nCount - 1U) % nCount;
+	}
 	else
-		m_nExtendedQuickParameter = (m_nExtendedQuickParameter + 7U) & 7U;
+	{
+		if (nDirection > 0) m_nExtendedQuickParameter = (m_nExtendedQuickParameter + 1U) & 7U;
+		else m_nExtendedQuickParameter = (m_nExtendedQuickParameter + 7U) & 7U;
+	}
 	m_bExtendedBlinkOn = true;
 	m_bExtendedRedrawPending = true;
 }
 
 void CUserInterface::AdjustExtendedQuickValue (int nDirection)
 {
+	if (m_nExtendedQuickContext == ExtendedQuickFilterType)
+	{
+		const int nCount = (int) CMiniDexed::FilterTypeUnknown;
+		int nValue = (int) m_pMiniDexed->GetPerformanceFilterType () + nDirection;
+		if (nValue < 0) nValue = nCount - 1;
+		if (nValue >= nCount) nValue = 0;
+		m_pMiniDexed->SetPerformanceFilterType ((unsigned) nValue);
+		m_nExtendedQuickParameter = (unsigned) nValue;
+		m_Menu.EventHandler (CUIMenu::MenuEventUpdateParameter);
+		m_bExtendedBlinkOn = true;
+		m_bExtendedRedrawPending = true;
+		return;
+	}
+
 	const TExtendedQuickParameter *pQuick =
 		GetExtendedQuickParameter (m_nExtendedQuickContext, m_nExtendedQuickParameter);
 	if (!pQuick) return;
@@ -1626,7 +1728,18 @@ void CUserInterface::ProcessEncoder2Events (void)
 			m_bEncoder2ClickPending = false;
 			if (m_nExtendedQuickContext != ExtendedQuickNone)
 			{
-				m_bExtendedQuickEdit = !m_bExtendedQuickEdit;
+				if (m_nExtendedQuickContext == ExtendedQuickFilterType && !m_bExtendedQuickEdit)
+				{
+					// Apply the mode highlighted in the Filter-Type grid, then enter
+					// edit/audition mode so subsequent rotation changes it immediately.
+					m_pMiniDexed->SetPerformanceFilterType (m_nExtendedQuickParameter);
+					m_Menu.EventHandler (CUIMenu::MenuEventUpdateParameter);
+					m_bExtendedQuickEdit = true;
+				}
+				else
+				{
+					m_bExtendedQuickEdit = !m_bExtendedQuickEdit;
+				}
 				m_bExtendedBlinkOn = true;
 				m_bExtendedRedrawPending = true;
 			}
